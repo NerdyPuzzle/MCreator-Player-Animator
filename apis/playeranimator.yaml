@@ -1,5 +1,5 @@
 ---
-neoforge-1.20.4:
+neoforge-1.21.1:
   gradle: |
       repositories {
        maven {
@@ -8,7 +8,7 @@ neoforge-1.20.4:
       }
 
        dependencies {
-         implementation 'dev.kosmx.player-anim:player-animation-lib-forge:1.0.2-rc1+1.20.4'
+         implementation 'dev.kosmx.player-anim:player-animation-lib-forge:2.0.0-alpha1+1.21'
        }
 
   update_files:
