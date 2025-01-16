@@ -2,13 +2,13 @@
   "id": "player_animator",
   "weight": 50,
   "supportedversions": [
-    2024001,
 	2024002,
-	2024003
+	2024003,
+	2024004
   ],
   "info": {
     "name": "Player Animator",
-    "version": "2.0",
+    "version": "2.1",
     "description": "Animate the player model using blockbench or blender",
     "author": "NerdyPuzzle"
   }

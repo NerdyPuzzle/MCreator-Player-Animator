@@ -33,19 +33,10 @@ public class ${name}Procedure {
 	public static void handleData(final ${JavaModName}AnimationMessage message, final IPayloadContext context) {
 		if (context.flow() == PacketFlow.CLIENTBOUND) {
 			context.enqueueWork(() -> {
-				Level level = Minecraft.getInstance().player.level();
+				Level level = context.player().level();
 				if (level.getEntity(message.target) != null) {
 					Player player = (Player) level.getEntity(message.target);
-					if (player instanceof AbstractClientPlayer player_) { 
-						var animation = (ModifierLayer<IAnimation>) PlayerAnimationAccess.getPlayerAssociatedData(Minecraft.getInstance().player).get(ResourceLocation.fromNamespaceAndPath("${modid}", "player_animation"));
-						if (animation != null && (message.override ? true : !animation.isActive())) {
-							animation.replaceAnimationWithFade(AbstractFadeModifier.functionalFadeIn(20, (modelName, type, value) -> value),
-								PlayerAnimationRegistry.getAnimation(ResourceLocation.fromNamespaceAndPath("${modid}", message.animation)).playAnimation()
-									.setFirstPersonMode(FirstPersonMode.THIRD_PERSON_MODEL)
-									.setFirstPersonConfiguration(new FirstPersonConfiguration().setShowRightArm(true).setShowLeftItem(false))
-							);
-						}
-					}
+					setAnimationClientside(player, message.animation, message.override);
 				}		
 			}).exceptionally(e -> {
 				context.connection().disconnect(Component.literal(e.getMessage()));
@@ -59,3 +50,17 @@ public class ${name}Procedure {
 	}
 
     }
+	
+	@OnlyIn(Dist.CLIENT)
+	public static void setAnimationClientside(Player player, String anim, boolean override) {
+		if (player instanceof net.minecraft.client.player.AbstractClientPlayer player_) { 
+			var animation = (ModifierLayer<IAnimation>) PlayerAnimationAccess.getPlayerAssociatedData(player_).get(ResourceLocation.fromNamespaceAndPath("${modid}", "player_animation"));
+			if (animation != null && override ? true : !animation.isActive()) {
+				animation.replaceAnimationWithFade(AbstractFadeModifier.functionalFadeIn(20, (modelName, type, value) -> value),
+					PlayerAnimationRegistry.getAnimation(ResourceLocation.fromNamespaceAndPath("${modid}", anim)).playAnimation()
+					.setFirstPersonMode(FirstPersonMode.THIRD_PERSON_MODEL)
+					.setFirstPersonConfiguration(new FirstPersonConfiguration().setShowRightArm(true).setShowLeftItem(false))
+				);
+			}
+		}
+	}

@@ -10,7 +10,7 @@ public class ${name}Procedure {
 	1000, ${name}Procedure::registerPlayerAnimations);
     }
 
-    private static IAnimation registerPlayerAnimations(AbstractClientPlayer player) {
+    private static IAnimation registerPlayerAnimations(net.minecraft.client.player.AbstractClientPlayer player) {
 	return new ModifierLayer<>();
     }
 
@@ -42,17 +42,10 @@ public class ${name}Procedure {
 	public static void handler(${JavaModName}AnimationMessage message, Supplier<NetworkEvent.Context> contextSupplier) {
 		NetworkEvent.Context context = contextSupplier.get();
 		context.enqueueWork(() -> {
-			Level level = Minecraft.getInstance().player.level();
+			Level level = context.getSender().level();
 			if (level.getEntity(message.target) != null) {
 				Player player = (Player) level.getEntity(message.target);
-				if (player instanceof AbstractClientPlayer player_) { 
-					var animation = (ModifierLayer<IAnimation>)PlayerAnimationAccess.getPlayerAssociatedData(player_).get(
-						new ResourceLocation("${modid}", "player_animation"));
-					if (animation != null && (message.override ? true : !animation.isActive())) {
-						animation.setAnimation(new KeyframeAnimationPlayer(PlayerAnimationRegistry.getAnimation(
-							new ResourceLocation("${modid}", message.animation.getString()))));
-					}
-				}
+				setAnimationClientside(player, message.animation.getString(), message.override);
 			}
 		});
 		context.setPacketHandled(true);
@@ -63,4 +56,15 @@ public class ${name}Procedure {
 	}
 
     }
- 
+	
+	@OnlyIn(Dist.CLIENT)
+	public static void setAnimationClientside(Player player, String anim, boolean override) {
+		if (player instanceof net.minecraft.client.player.AbstractClientPlayer player_) { 
+			var animation = (ModifierLayer<IAnimation>)PlayerAnimationAccess.getPlayerAssociatedData(player_).get(
+				new ResourceLocation("${modid}", "player_animation"));
+			if (animation != null && override ? true : !animation.isActive()) {
+				animation.setAnimation(new KeyframeAnimationPlayer(PlayerAnimationRegistry.getAnimation(
+					new ResourceLocation("${modid}", anim))));
+			}
+		}
+	}
