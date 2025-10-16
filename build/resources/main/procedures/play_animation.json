@@ -1,0 +1,44 @@
+{
+  "args0": [
+    {
+      "type": "input_value",
+      "name": "entity",
+      "check": "Entity"
+    },
+    {
+      "type": "field_animation_selector",
+      "name": "animation"
+    },
+    {
+      "type": "field_dropdown",
+      "name": "active",
+      "options": [
+        [
+          "False",
+          "false"
+        ],
+        [
+          "True",
+          "true"
+        ]
+      ]
+    }
+  ],
+  "inputsInline": true,
+  "previousStatement": null,
+  "nextStatement": null,
+  "colour": "324",
+  "mcreator": {
+    "toolbox_id": "nerdyplayeranimator",
+    "toolbox_init": [
+      "<value name=\"entity\"><block type=\"entity_from_deps\"></block></value>"
+    ],
+    "inputs": [
+      "entity"
+    ],
+    "fields": [
+      "animation",
+      "active"
+    ]
+  }
+}
