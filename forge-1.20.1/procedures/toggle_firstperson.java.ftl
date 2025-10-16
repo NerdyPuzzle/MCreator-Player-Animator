@@ -1,1 +1,0 @@
-AnimUtils.disableFirstPersonAnim = ${field$toggle};

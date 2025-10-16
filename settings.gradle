@@ -1,0 +1,4 @@
+rootProject.name = 'Attributes-main'
+
+include ":MCreator"
+project(":MCreator").projectDir = file(mcreator_path)
