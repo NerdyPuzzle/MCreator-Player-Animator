@@ -28,7 +28,7 @@ public class ${JavaModName}PlayerAnimationAPI {
 		public final Map<String, PlayerBone> bones;
 
 		public PlayerAnimation(JsonObject animation) {
-		    if (animation.has("animation_length")
+		    if (animation.has("animation_length"))
 			    this.length = animation.get("animation_length").getAsFloat();
 			else
 			    this.length = 0;
