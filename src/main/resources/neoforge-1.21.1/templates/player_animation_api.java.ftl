@@ -9,7 +9,7 @@ import com.google.gson.JsonArray;
 public class ${JavaModName}PlayerAnimationAPI {
 	public static final Map<String, PlayerAnimation> animations = new Object2ObjectOpenHashMap<>();
 	public static final Map<Player, PlayerAnimation> active_animations = new Object2ObjectOpenHashMap<>();
-	public static boolean initialized = false;
+	public static final Map<UUID, Boolean> initialized = new HashMap<>();
 
 	public static void loadAnimationFile(JsonObject file) {
 		JsonObject animationsObject = file.get("animations").getAsJsonObject();
@@ -142,9 +142,9 @@ public class ${JavaModName}PlayerAnimationAPI {
 	private static class AnimationLoader {
 		@SubscribeEvent
 		public static void loadAnimations(PlayerEvent.PlayerLoggedInEvent event) {
-			if (!${JavaModName}PlayerAnimationAPI.initialized) {
+			if (${JavaModName}PlayerAnimationAPI.initialized.get(event.getEntity().getUUID()) == null) {
 				if (event.getEntity() instanceof ServerPlayer player) {
-					${JavaModName}PlayerAnimationAPI.initialized = true;
+					${JavaModName}PlayerAnimationAPI.initialized.put(player.getUUID(), true);
 					ServerLevel level = (ServerLevel) player.level();
 					class Output implements PackResources.ResourceOutput {
 						private List<JsonObject> jsonObjects;
