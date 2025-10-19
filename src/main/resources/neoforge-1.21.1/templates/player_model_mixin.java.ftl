@@ -10,11 +10,13 @@ public abstract class PlayerAnimationMixin<T extends LivingEntity> {
 			master = "${modid}";
 		PlayerModel<T> model = (PlayerModel<T>) (Object) this;
 		Player player = (Player) entityIn;
-		if (!player.getPersistentData().getString("PlayerCurrentAnimation").isEmpty()) {
-		    model.crouching = false;
+		${JavaModName}PlayerAnimationAPI.PlayerAnimation animation = ${JavaModName}PlayerAnimationAPI.active_animations.get(player);
+		if (animation == null)
+	        return;
+	    if (animation.bones.get("left_arm") != null || animation.bones.get("torso") != null || animation.bones.get("right_arm") != null)
 		    model.attackTime = 0;
-		    resetModelPose(model);
-		}
+		model.crouching = false;
+		resetModelPose(model);
 	}
 
 	@Inject(method = "setupAnim", at = @At(value = "TAIL"))

@@ -12,10 +12,12 @@ public abstract class PlayerAnimationMixin {
 		if (player == null)
 		    return;
 		PlayerModel model = (PlayerModel) (Object) this;
-		if (!player.getPersistentData().getString("PlayerCurrentAnimation").isEmpty()) {
-		    renderState.isCrouching = false;
+		${JavaModName}PlayerAnimationAPI.PlayerAnimation animation = ${JavaModName}PlayerAnimationAPI.active_animations.get(player);
+		if (animation == null)
+	        return;
+	    if (animation.bones.get("left_arm") != null || animation.bones.get("torso") != null || animation.bones.get("right_arm") != null)
 		    renderState.attackTime = 0;
-		}
+		renderState.isCrouching = false;
 	}
 
 	@Inject(method = "Lnet/minecraft/client/model/PlayerModel;setupAnim(Lnet/minecraft/client/renderer/entity/state/PlayerRenderState;)V", at = @At(value = "TAIL"))

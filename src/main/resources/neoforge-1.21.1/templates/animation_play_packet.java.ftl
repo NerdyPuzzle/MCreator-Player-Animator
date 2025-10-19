@@ -19,12 +19,14 @@ public record PlayPlayerAnimationMessage(int player, String animation, boolean o
 			context.enqueueWork(() -> {
 				Player player = (Player) context.player().level().getEntity(message.player);
 				CompoundTag data = player.getPersistentData();
-				data.putString("PlayerCurrentAnimation", message.animation);
-				data.putBoolean("OverrideCurrentAnimation", message.override);
 	            if (message.animation.isEmpty()) {
                     data.putBoolean("ResetPlayerAnimation", true);
+                    data.remove("PlayerCurrentAnimation");
                     data.remove("PlayerAnimationProgress");
-                }
+                } else {
+				    data.putString("PlayerCurrentAnimation", message.animation);
+				    data.putBoolean("OverrideCurrentAnimation", message.override);
+				}
 			}).exceptionally(e -> {
 				context.connection().disconnect(Component.literal(e.getMessage()));
 				return null;
