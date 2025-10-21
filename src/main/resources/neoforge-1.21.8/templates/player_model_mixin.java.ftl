@@ -32,9 +32,9 @@ public abstract class PlayerAnimationMixin {
 	    }
 		PlayerModel model = (PlayerModel) (Object) this;
 		CompoundTag data = player.getPersistentData();
-		String playingAnimation = data.getString("PlayerCurrentAnimation");
-		boolean overrideAnimation = data.getBoolean("OverrideCurrentAnimation");
-		if (data.getBoolean("ResetPlayerAnimation")) {
+		String playingAnimation = data.getStringOr("PlayerCurrentAnimation", "");
+		boolean overrideAnimation = data.getBooleanOr("OverrideCurrentAnimation", false);
+		if (data.getBooleanOr("ResetPlayerAnimation", false)) {
 		    data.remove("ResetPlayerAnimation");
 		    data.remove("LastTickTime");
 		    ${JavaModName}PlayerAnimationAPI.active_animations.put(player, null);
@@ -58,8 +58,8 @@ public abstract class PlayerAnimationMixin {
 			data.putFloat("PlayerAnimationProgress", animationProgress);
 			data.putFloat("LastTickTime", renderState.ageInTicks);
 		} else {
-			animationProgress = data.getFloat("PlayerAnimationProgress");
-			float lastTickTime = data.getFloat("LastTickTime");
+			animationProgress = data.getFloatOr("PlayerAnimationProgress", 0);
+			float lastTickTime = data.getFloatOr("LastTickTime", renderState.ageInTicks);
 			float deltaTime = (renderState.ageInTicks - lastTickTime) / 20f; // Convert ticks to seconds
 			animationProgress += deltaTime;
 			data.putFloat("PlayerAnimationProgress", animationProgress);

@@ -27,7 +27,7 @@ public abstract class PlayerAnimationRendererMixin extends LivingEntityRenderer<
 	    ${JavaModName}PlayerAnimationAPI.PlayerBone bone = animation.bones.get("body");
         if (bone == null)
             return;
-        float animationProgress = player.getPersistentData().getFloat("PlayerAnimationProgress");
+        float animationProgress = player.getPersistentData().getFloatOr("PlayerAnimationProgress", 0);
 		Vec3 scale = ${JavaModName}PlayerAnimationAPI.PlayerBone.interpolate(bone.scales, animationProgress);
 		if (scale != null) {
 			poseStack.scale((float) scale.x, (float) scale.y, (float) scale.z);

@@ -2,12 +2,13 @@
   "id": "nerdy_player_animator",
   "weight": 5000,
   "supportedversions": [
-	2025002
+    202500342611,
+    2025003
   ],
   "javaplugin": "net.nerdypuzzle.playeranimator.Launcher",
   "info": {
     "name": "Nerdy's Player Animator",
-    "version": "1.2",
+    "version": "1.3",
     "description": "Animate the player using blockbench",
     "author": "NerdyPuzzle"
   }

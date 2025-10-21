@@ -1,1 +1,0 @@
-(${input$entity} instanceof Player ? ${input$entity}.getPersistentData().getString("PlayerCurrentAnimation").equals("${modid}:${field$animation}") : false)

@@ -382,7 +382,7 @@ public class ${JavaModName}PlayerAnimationAPI {
         }
 	}
 
-	@EventBusSubscriber(value = Dist.CLIENT, bus = EventBusSubscriber.Bus.MOD)
+	@EventBusSubscriber(value = Dist.CLIENT)
 	public static class ClientAttachments {
 		public static final ContextKey<Player> PLAYER = new ContextKey<>(ResourceLocation.parse("c:player_attachment"));
 

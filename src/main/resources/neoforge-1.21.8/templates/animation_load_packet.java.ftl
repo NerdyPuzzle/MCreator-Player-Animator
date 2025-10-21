@@ -3,7 +3,7 @@ package ${package}.network;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
-@EventBusSubscriber(bus = EventBusSubscriber.Bus.MOD)
+@EventBusSubscriber
 public record LoadPlayerAnimationMessage(String animationfile) implements CustomPacketPayload {
 	public static final Type<LoadPlayerAnimationMessage> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(${JavaModName}.MODID, "load_player_animation"));
 	public static final StreamCodec<RegistryFriendlyByteBuf, LoadPlayerAnimationMessage> STREAM_CODEC = StreamCodec.of((RegistryFriendlyByteBuf buffer, LoadPlayerAnimationMessage message) -> {
