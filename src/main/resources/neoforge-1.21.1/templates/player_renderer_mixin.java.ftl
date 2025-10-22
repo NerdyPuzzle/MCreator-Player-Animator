@@ -8,6 +8,38 @@ public abstract class PlayerAnimationRendererMixin extends LivingEntityRenderer<
 
 	private String master = null;
 
+	@Inject(method = "render(Lnet/minecraft/client/player/AbstractClientPlayer;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/entity/LivingEntityRenderer;render(Lnet/minecraft/world/entity/LivingEntity;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V"))
+	private void hideBonesInFirstPerson(AbstractClientPlayer entity, float f, float g, PoseStack poseStack, MultiBufferSource bufferSource, int light, CallbackInfo ci) {
+		if (master == null) {
+		    if (!${JavaModName}PlayerAnimationAPI.animations.isEmpty())
+			    master = "${modid}";
+			else
+			    return;
+		}
+		if (!master.equals("${modid}")) {
+			return;
+	    }
+	    Minecraft mc = Minecraft.getInstance();
+		if (entity.getPersistentData().getBoolean("FirstPersonAnimation") && mc.options.getCameraType().isFirstPerson() && entity == mc.player) {
+			this.model.head.visible = false;
+			this.model.body.visible = false;
+			this.model.leftLeg.visible = false;
+			this.model.rightLeg.visible = false;
+			this.model.rightArm.visible = false;
+			this.model.leftArm.visible = false;
+			this.model.hat.visible = false;
+			this.model.leftSleeve.visible = false;
+			this.model.rightSleeve.visible = false;
+			this.model.leftPants.visible = false;
+			this.model.rightPants.visible = false;
+			this.model.jacket.visible = false;
+			this.model.rightArm.visible = true;
+			this.model.rightSleeve.visible = true;
+			this.model.leftArm.visible = true;
+			this.model.leftSleeve.visible = true;
+		}
+	}
+
     @Inject(method = "Lnet/minecraft/client/renderer/entity/player/PlayerRenderer;setupRotations(Lnet/minecraft/client/player/AbstractClientPlayer;Lcom/mojang/blaze3d/vertex/PoseStack;FFFF)V", at = @At("RETURN"))
     private void setupRotations(AbstractClientPlayer player, PoseStack poseStack, float f, float bodyYaw, float deltaTick, float g, CallbackInfo ci) {
 		if (master == null) {

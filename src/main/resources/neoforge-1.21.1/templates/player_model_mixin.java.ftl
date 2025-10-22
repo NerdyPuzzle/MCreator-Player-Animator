@@ -31,6 +31,7 @@ public abstract class PlayerAnimationMixin<T extends LivingEntity> {
 		CompoundTag data = player.getPersistentData();
 		String playingAnimation = data.getString("PlayerCurrentAnimation");
 		boolean overrideAnimation = data.getBoolean("OverrideCurrentAnimation");
+		boolean firstPerson = data.getBoolean("FirstPersonAnimation");
 		if (data.getBoolean("ResetPlayerAnimation")) {
 		    data.remove("ResetPlayerAnimation");
 		    resetModelPose(model);
@@ -42,6 +43,7 @@ public abstract class PlayerAnimationMixin<T extends LivingEntity> {
 		if (overrideAnimation) {
 			data.putBoolean("OverrideCurrentAnimation", false);
 			data.remove("PlayerAnimationProgress");
+			firstPerson = data.getBoolean("FirstPersonAnimation");
 			${JavaModName}PlayerAnimationAPI.active_animations.put(player, null);
 		}
 		${JavaModName}PlayerAnimationAPI.PlayerAnimation animation = ${JavaModName}PlayerAnimationAPI.active_animations.get(player);
@@ -66,6 +68,7 @@ public abstract class PlayerAnimationMixin<T extends LivingEntity> {
 					data.remove("PlayerCurrentAnimation");
 					data.remove("PlayerAnimationProgress");
 				    data.putBoolean("ResetPlayerAnimation", true);
+				    data.putBoolean("FirstPersonAnimation", false);
 				    ${JavaModName}PlayerAnimationAPI.active_animations.put(player, null);
 				    animationProgress = animation.length;
 				} else if (animation.hold_on_last_frame) {

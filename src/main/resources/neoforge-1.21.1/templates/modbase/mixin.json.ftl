@@ -24,7 +24,11 @@
   ],
   "client": [
     "PlayerAnimationMixin",
-    "PlayerAnimationRendererMixin"
+    "PlayerAnimationRendererMixin",
+    "CameraAccessor",
+    "EntityRenderDispatcherMixin",
+    "ItemInHandRendererMixin",
+    "LevelRendererMixin"
   ],
   "injectors": {
     "defaultRequire": 1

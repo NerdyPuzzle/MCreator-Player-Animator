@@ -4,7 +4,8 @@ if (${input$entity} instanceof Player) {
         data.remove("PlayerCurrentAnimation");
         data.remove("PlayerAnimationProgress");
         data.putBoolean("ResetPlayerAnimation", true);
+        data.putBoolean("FirstPersonAnimation", false);
     } else {
-        PacketDistributor.sendToPlayersInDimension((ServerLevel) ${input$entity}.level(), new PlayPlayerAnimationMessage(${input$entity}.getId(), "", false));
+        PacketDistributor.sendToPlayersInDimension((ServerLevel) ${input$entity}.level(), new PlayPlayerAnimationMessage(${input$entity}.getId(), "", false, false));
     }
 }

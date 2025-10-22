@@ -34,16 +34,23 @@ public abstract class PlayerAnimationMixin {
 		CompoundTag data = player.getPersistentData();
 		String playingAnimation = data.getStringOr("PlayerCurrentAnimation", "");
 		boolean overrideAnimation = data.getBooleanOr("OverrideCurrentAnimation", false);
+		Minecraft mc = Minecraft.getInstance();
+		boolean firstPerson = data.getBooleanOr("FirstPersonAnimation", false) && mc.player == player;
 		if (data.getBooleanOr("ResetPlayerAnimation", false)) {
 		    data.remove("ResetPlayerAnimation");
 		    data.remove("LastTickTime");
 		    ${JavaModName}PlayerAnimationAPI.active_animations.put(player, null);
+		    hideModelParts(model, false);
 		}
 		if (playingAnimation.isEmpty()) {
 			return;
 		}
+		if (firstPerson) {
+            hideModelParts(model, mc.options.getCameraType().isFirstPerson());
+		}
 		float animationProgress;
 		if (overrideAnimation) {
+		    firstPerson = data.getBooleanOr("FirstPersonAnimation", false);
 		    ${JavaModName}PlayerAnimationAPI.active_animations.put(player, null);
 			data.remove("PlayerAnimationProgress");
 			data.putBoolean("OverrideCurrentAnimation", false);
@@ -66,6 +73,8 @@ public abstract class PlayerAnimationMixin {
             data.putFloat("LastTickTime", renderState.ageInTicks);
 			if (animationProgress >= animation.length) {
 				if (!animation.hold_on_last_frame && !animation.loop) {
+				    data.putBoolean("FirstPersonAnimation", false);
+				    data.putBoolean("ResetPlayerAnimation", true);
 					data.remove("PlayerCurrentAnimation");
 					data.remove("PlayerAnimationProgress");
 				    ${JavaModName}PlayerAnimationAPI.active_animations.put(player, null);
@@ -126,5 +135,16 @@ public abstract class PlayerAnimationMixin {
 			default :
 				return null;
 		}
+	}
+
+	private void hideModelParts(PlayerModel model, boolean hide) {
+        model.head.skipDraw = hide;
+        model.hat.skipDraw = hide;
+        model.body.skipDraw = hide;
+        model.jacket.skipDraw = hide;
+        model.leftLeg.skipDraw = hide;
+        model.leftPants.skipDraw = hide;
+        model.rightLeg.skipDraw = hide;
+        model.rightPants.skipDraw = hide;
 	}
 }

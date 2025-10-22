@@ -3,7 +3,8 @@ if (${input$entity} instanceof Player) {
         CompoundTag data = ${input$entity}.getPersistentData();
         data.putString("PlayerCurrentAnimation", "${modid}:${field$animation}");
         data.putBoolean("OverrideCurrentAnimation", ${field$active});
+        data.putBoolean("FirstPersonAnimation", ${field$firstperson});
     } else {
-        PacketDistributor.sendToPlayersInDimension((ServerLevel) ${input$entity}.level(), new PlayPlayerAnimationMessage(${input$entity}.getId(), "${modid}:${field$animation}", ${field$active}));
+        PacketDistributor.sendToPlayersInDimension((ServerLevel) ${input$entity}.level(), new PlayPlayerAnimationMessage(${input$entity}.getId(), "${modid}:${field$animation}", ${field$active}, ${field$firstperson}));
     }
 }
