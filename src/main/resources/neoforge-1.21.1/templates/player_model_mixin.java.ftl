@@ -9,7 +9,11 @@ public abstract class PlayerAnimationMixin<T extends LivingEntity> {
 		if (master == null)
 			master = "${modid}";
 		PlayerModel<T> model = (PlayerModel<T>) (Object) this;
-		Player player = (Player) entityIn;
+		Player player = null;
+		if (entityIn instanceof Player player_)
+		    player = player_;
+		else
+		    return;
 		${JavaModName}PlayerAnimationAPI.PlayerAnimation animation = ${JavaModName}PlayerAnimationAPI.active_animations.get(player);
 		if (animation == null)
 	        return;
@@ -27,7 +31,11 @@ public abstract class PlayerAnimationMixin<T extends LivingEntity> {
 			return;
 	    }
 		PlayerModel<T> model = (PlayerModel<T>) (Object) this;
-		Player player = (Player) entityIn;
+		Player player = null;
+		if (entityIn instanceof Player player_)
+		    player = player_;
+		else
+		    return;
 		CompoundTag data = player.getPersistentData();
 		String playingAnimation = data.getString("PlayerCurrentAnimation");
 		boolean overrideAnimation = data.getBoolean("OverrideCurrentAnimation");

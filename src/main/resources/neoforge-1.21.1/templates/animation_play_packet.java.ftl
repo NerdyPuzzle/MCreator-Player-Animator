@@ -19,6 +19,8 @@ public record PlayPlayerAnimationMessage(int player, String animation, boolean o
 		if (context.flow() == PacketFlow.CLIENTBOUND) {
 			context.enqueueWork(() -> {
 				Player player = (Player) context.player().level().getEntity(message.player);
+				if (player == null)
+				    return;
 				CompoundTag data = player.getPersistentData();
 	            if (message.animation.isEmpty()) {
                     data.putBoolean("ResetPlayerAnimation", true);
