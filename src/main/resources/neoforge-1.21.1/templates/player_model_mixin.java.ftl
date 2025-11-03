@@ -8,7 +8,10 @@ public abstract class PlayerAnimationMixin<T extends LivingEntity> {
 	public void setupPivot(T entityIn, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch, CallbackInfo ci) {
 		if (master == null)
 			master = "${modid}";
+		if (!master.equals("${modid}"))
+		    return;
 		PlayerModel<T> model = (PlayerModel<T>) (Object) this;
+		resetModelPose(model);
 		Player player = null;
 		if (entityIn instanceof Player player_)
 		    player = player_;
@@ -20,7 +23,6 @@ public abstract class PlayerAnimationMixin<T extends LivingEntity> {
 	    if (animation.bones.get("left_arm") != null || animation.bones.get("torso") != null || animation.bones.get("right_arm") != null)
 		    model.attackTime = 0;
 		model.crouching = false;
-		resetModelPose(model);
 	}
 
 	@Inject(method = "setupAnim", at = @At(value = "TAIL"))
@@ -42,7 +44,7 @@ public abstract class PlayerAnimationMixin<T extends LivingEntity> {
 		boolean firstPerson = data.getBoolean("FirstPersonAnimation");
 		if (data.getBoolean("ResetPlayerAnimation")) {
 		    data.remove("ResetPlayerAnimation");
-		    resetModelPose(model);
+            playingAnimation = "";
 		    ${JavaModName}PlayerAnimationAPI.active_animations.put(player, null);
 		}
 		if (playingAnimation.isEmpty()) {

@@ -8,6 +8,8 @@ public abstract class PlayerAnimationMixin {
 	public void setupPivot(PlayerRenderState renderState, CallbackInfo ci) {
 		if (master == null)
 			master = "${modid}";
+		if (!master.equals("${modid}"))
+		    return;
 		Player player = (Player) renderState.getRenderData(${JavaModName}PlayerAnimationAPI.ClientAttachments.PLAYER);
 		if (player == null)
 		    return;
@@ -39,6 +41,7 @@ public abstract class PlayerAnimationMixin {
 		if (data.getBooleanOr("ResetPlayerAnimation", false)) {
 		    data.remove("ResetPlayerAnimation");
 		    data.remove("LastTickTime");
+		    playingAnimation = "";
 		    ${JavaModName}PlayerAnimationAPI.active_animations.put(player, null);
 		    hideModelParts(model, false);
 		}
