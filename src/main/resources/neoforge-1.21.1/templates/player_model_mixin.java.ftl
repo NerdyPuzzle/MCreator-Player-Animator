@@ -59,6 +59,10 @@ public abstract class PlayerAnimationMixin<T extends LivingEntity> {
 		${JavaModName}PlayerAnimationAPI.PlayerAnimation animation = ${JavaModName}PlayerAnimationAPI.active_animations.get(player);
 		if (animation == null) {
 			animation = ${JavaModName}PlayerAnimationAPI.animations.get(playingAnimation);
+			if (animation == null) {
+			    ${JavaModName}.LOGGER.info("Attepted to play null animation " + playingAnimation + ", did animations fail to load?");
+			    return;
+			}
 			${JavaModName}PlayerAnimationAPI.active_animations.put(player, animation);
 		}
 		float animationProgress;

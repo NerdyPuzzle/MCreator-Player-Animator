@@ -14,6 +14,7 @@ public abstract class PlayerAnimationMixin {
 		if (player == null)
 		    return;
 		PlayerModel model = (PlayerModel) (Object) this;
+		hideModelParts(model, false);
 		${JavaModName}PlayerAnimationAPI.PlayerAnimation animation = ${JavaModName}PlayerAnimationAPI.active_animations.get(player);
 		if (animation == null)
 	        return;
@@ -43,7 +44,6 @@ public abstract class PlayerAnimationMixin {
 		    data.remove("LastTickTime");
 		    playingAnimation = "";
 		    ${JavaModName}PlayerAnimationAPI.active_animations.put(player, null);
-		    hideModelParts(model, false);
 		}
 		if (playingAnimation.isEmpty()) {
 			return;
@@ -61,6 +61,10 @@ public abstract class PlayerAnimationMixin {
 		${JavaModName}PlayerAnimationAPI.PlayerAnimation animation = ${JavaModName}PlayerAnimationAPI.active_animations.get(player);
 		if (animation == null) {
 			animation = ${JavaModName}PlayerAnimationAPI.animations.get(playingAnimation);
+			if (animation == null) {
+			    ${JavaModName}.LOGGER.info("Attepted to play null animation " + playingAnimation + ", did animations fail to load?");
+			    return;
+			}
 			${JavaModName}PlayerAnimationAPI.active_animations.put(player, animation);
 		}
 		if (!data.contains("PlayerAnimationProgress")) {

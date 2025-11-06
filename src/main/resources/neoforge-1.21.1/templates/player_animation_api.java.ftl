@@ -287,7 +287,6 @@ public class ${JavaModName}PlayerAnimationAPI {
 		public static void loadAnimations(PlayerEvent.PlayerLoggedInEvent event) {
 			if (${JavaModName}PlayerAnimationAPI.initialized.get(event.getEntity().getUUID()) == null) {
 				if (event.getEntity() instanceof ServerPlayer player) {
-					${JavaModName}PlayerAnimationAPI.initialized.put(player.getUUID(), true);
 					ServerLevel level = (ServerLevel) player.level();
 					class Output implements PackResources.ResourceOutput {
 						private List<JsonObject> jsonObjects;
@@ -325,6 +324,7 @@ public class ${JavaModName}PlayerAnimationAPI {
                         }
 					});
 					sendAnimationsInBatches(player, jsons, namespaces);
+					${JavaModName}PlayerAnimationAPI.initialized.put(player.getUUID(), true);
 				}
 			}
 		}

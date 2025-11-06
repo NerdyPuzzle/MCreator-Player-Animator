@@ -2,7 +2,6 @@
   "id": "nerdy_player_animator",
   "weight": 5000,
   "supportedversions": [
-    202500342611,
     2025003
   ],
   "javaplugin": "net.nerdypuzzle.playeranimator.Launcher",
