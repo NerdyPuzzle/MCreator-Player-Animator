@@ -7,7 +7,7 @@
   "javaplugin": "net.nerdypuzzle.playeranimator.Launcher",
   "info": {
     "name": "Nerdy's Player Animator",
-    "version": "1.5.2",
+    "version": "1.5.3",
     "description": "Animate the player using blockbench",
     "author": "NerdyPuzzle"
   }
