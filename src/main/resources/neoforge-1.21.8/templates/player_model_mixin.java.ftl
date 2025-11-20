@@ -9,17 +9,17 @@ public abstract class PlayerAnimationMixin {
 		if (master == null)
 			master = "${modid}";
 		if (!master.equals("${modid}"))
-		    return;
+			return;
 		Player player = (Player) renderState.getRenderData(${JavaModName}PlayerAnimationAPI.ClientAttachments.PLAYER);
 		if (player == null)
-		    return;
+			return;
 		PlayerModel model = (PlayerModel) (Object) this;
 		hideModelParts(model, false);
 		${JavaModName}PlayerAnimationAPI.PlayerAnimation animation = ${JavaModName}PlayerAnimationAPI.active_animations.get(player);
 		if (animation == null)
-	        return;
-	    if (animation.bones.get("left_arm") != null || animation.bones.get("torso") != null || animation.bones.get("right_arm") != null)
-		    renderState.attackTime = 0;
+			return;
+		if (animation.bones.get("left_arm") != null || animation.bones.get("torso") != null || animation.bones.get("right_arm") != null)
+			renderState.attackTime = 0;
 		renderState.isCrouching = false;
 	}
 
@@ -27,12 +27,12 @@ public abstract class PlayerAnimationMixin {
 	public void setupAnim(PlayerRenderState renderState, CallbackInfo ci) {
 		Player player = (Player) renderState.getRenderData(${JavaModName}PlayerAnimationAPI.ClientAttachments.PLAYER);
 		if (player == null)
-		    return;
-		if (!master.equals("${modid}")) {
-		    if (!${JavaModName}PlayerAnimationAPI.animations.isEmpty())
-		        ${JavaModName}PlayerAnimationAPI.animations.clear();
 			return;
-	    }
+		if (!master.equals("${modid}")) {
+			if (!${JavaModName}PlayerAnimationAPI.animations.isEmpty())
+				${JavaModName}PlayerAnimationAPI.animations.clear();
+			return;
+		}
 		PlayerModel model = (PlayerModel) (Object) this;
 		CompoundTag data = player.getPersistentData();
 		String playingAnimation = data.getStringOr("PlayerCurrentAnimation", "");
@@ -40,30 +40,33 @@ public abstract class PlayerAnimationMixin {
 		Minecraft mc = Minecraft.getInstance();
 		boolean firstPerson = data.getBooleanOr("FirstPersonAnimation", false) && mc.player == player;
 		if (data.getBooleanOr("ResetPlayerAnimation", false)) {
-		    data.remove("ResetPlayerAnimation");
-		    data.remove("LastTickTime");
-		    playingAnimation = "";
-		    ${JavaModName}PlayerAnimationAPI.active_animations.put(player, null);
+			data.remove("ResetPlayerAnimation");
+			data.remove("LastTickTime");
+			data.remove("LastAnimationProgress");
+			data.remove("PlayedSoundTimes");
+			${JavaModName}PlayerAnimationAPI.active_animations.put(player, null);
 		}
 		if (playingAnimation.isEmpty()) {
 			return;
 		}
 		if (firstPerson) {
-            hideModelParts(model, mc.options.getCameraType().isFirstPerson());
+			hideModelParts(model, mc.options.getCameraType().isFirstPerson());
 		}
 		float animationProgress;
 		if (overrideAnimation) {
-		    firstPerson = data.getBooleanOr("FirstPersonAnimation", false);
-		    ${JavaModName}PlayerAnimationAPI.active_animations.put(player, null);
+			firstPerson = data.getBooleanOr("FirstPersonAnimation", false);
+			${JavaModName}PlayerAnimationAPI.active_animations.put(player, null);
 			data.remove("PlayerAnimationProgress");
+			data.remove("LastAnimationProgress");
+			data.remove("PlayedSoundTimes");
 			data.putBoolean("OverrideCurrentAnimation", false);
 		}
 		${JavaModName}PlayerAnimationAPI.PlayerAnimation animation = ${JavaModName}PlayerAnimationAPI.active_animations.get(player);
 		if (animation == null) {
 			animation = ${JavaModName}PlayerAnimationAPI.animations.get(playingAnimation);
 			if (animation == null) {
-			    ${JavaModName}.LOGGER.info("Attepted to play null animation " + playingAnimation + ", did animations fail to load?");
-			    return;
+				${JavaModName}.LOGGER.info("Attepted to play null animation " + playingAnimation + ", did animations fail to load?");
+				return;
 			}
 			${JavaModName}PlayerAnimationAPI.active_animations.put(player, animation);
 		}
@@ -77,19 +80,53 @@ public abstract class PlayerAnimationMixin {
 			float deltaTime = (renderState.ageInTicks - lastTickTime) / 20f; // Convert ticks to seconds
 			animationProgress += deltaTime;
 			data.putFloat("PlayerAnimationProgress", animationProgress);
-            data.putFloat("LastTickTime", renderState.ageInTicks);
+			data.putFloat("LastTickTime", renderState.ageInTicks);
+			float lastAnimationProgress = data.getFloatOr("LastAnimationProgress", 0);
+			ListTag playedSoundsTag = data.getListOrEmpty("PlayedSoundTimes");
+			Set<Float> playedSoundTimes = new HashSet<>();
+			for (int i = 0; i < playedSoundsTag.size(); i++) {
+				playedSoundTimes.add(playedSoundsTag.getFloatOr(i, 0));
+			}
+			// Play any sound keyframes
+			for (Map.Entry<Float, String> soundEntry : animation.soundEffects.entrySet()) {
+				float soundTime = soundEntry.getKey();
+				String soundId = soundEntry.getValue();
+				if (playedSoundTimes.contains(soundTime)) {
+					continue;
+				}
+				boolean shouldPlay = false;
+				if (lastAnimationProgress <= animationProgress) {
+					shouldPlay = lastAnimationProgress < soundTime && animationProgress >= soundTime;
+				} else {
+					shouldPlay = lastAnimationProgress < soundTime || animationProgress >= soundTime;
+				}
+				if (shouldPlay && player.level() instanceof ClientLevel clientLevel) {
+					clientLevel.playLocalSound(
+						player.getX(), player.getY(), player.getZ(),
+						BuiltInRegistries.SOUND_EVENT.getValue(ResourceLocation.parse(soundId)),
+						SoundSource.NEUTRAL, 1.0F, 1.0F, false
+					);
+					playedSoundsTag.add(FloatTag.valueOf(soundTime));
+				}
+			}
+			data.put("PlayedSoundTimes", playedSoundsTag);
+			data.putFloat("LastAnimationProgress", animationProgress);
 			if (animationProgress >= animation.length) {
 				if (!animation.hold_on_last_frame && !animation.loop) {
-				    data.putBoolean("FirstPersonAnimation", false);
-				    data.putBoolean("ResetPlayerAnimation", true);
+					data.putBoolean("FirstPersonAnimation", false);
+					data.putBoolean("ResetPlayerAnimation", true);
 					data.remove("PlayerCurrentAnimation");
 					data.remove("PlayerAnimationProgress");
-				    ${JavaModName}PlayerAnimationAPI.active_animations.put(player, null);
-				    animationProgress = animation.length;
+					data.remove("LastAnimationProgress");
+					data.remove("PlayedSoundTimes");
+					${JavaModName}PlayerAnimationAPI.active_animations.put(player, null);
+					animationProgress = animation.length;
 				} else if (animation.hold_on_last_frame) {
-				    data.putFloat("PlayerAnimationProgress", animation.length);
+					data.putFloat("PlayerAnimationProgress", animation.length);
 				} else if (animation.loop) {
-				    data.remove("PlayerAnimationProgress");
+					data.remove("PlayerAnimationProgress");
+					data.remove("LastAnimationProgress");
+					data.remove("PlayedSoundTimes");
 				}
 			}
 		}
@@ -145,13 +182,13 @@ public abstract class PlayerAnimationMixin {
 	}
 
 	private void hideModelParts(PlayerModel model, boolean hide) {
-        model.head.skipDraw = hide;
-        model.hat.skipDraw = hide;
-        model.body.skipDraw = hide;
-        model.jacket.skipDraw = hide;
-        model.leftLeg.skipDraw = hide;
-        model.leftPants.skipDraw = hide;
-        model.rightLeg.skipDraw = hide;
-        model.rightPants.skipDraw = hide;
+		model.head.skipDraw = hide;
+		model.hat.skipDraw = hide;
+		model.body.skipDraw = hide;
+		model.jacket.skipDraw = hide;
+		model.leftLeg.skipDraw = hide;
+		model.leftPants.skipDraw = hide;
+		model.rightLeg.skipDraw = hide;
+		model.rightPants.skipDraw = hide;
 	}
 }

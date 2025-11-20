@@ -9,43 +9,44 @@ public abstract class PlayerAnimationMixin<T extends LivingEntity> {
 		if (master == null)
 			master = "${modid}";
 		if (!master.equals("${modid}"))
-		    return;
+			return;
 		PlayerModel<T> model = (PlayerModel<T>) (Object) this;
 		resetModelPose(model);
 		Player player = null;
 		if (entityIn instanceof Player player_)
-		    player = player_;
+			player = player_;
 		else
-		    return;
+			return;
 		${JavaModName}PlayerAnimationAPI.PlayerAnimation animation = ${JavaModName}PlayerAnimationAPI.active_animations.get(player);
 		if (animation == null)
-	        return;
-	    if (animation.bones.get("left_arm") != null || animation.bones.get("torso") != null || animation.bones.get("right_arm") != null)
-		    model.attackTime = 0;
+			return;
+		if (animation.bones.get("left_arm") != null || animation.bones.get("torso") != null || animation.bones.get("right_arm") != null)
+			model.attackTime = 0;
 		model.crouching = false;
 	}
 
 	@Inject(method = "setupAnim", at = @At(value = "TAIL"))
 	public void setupAnim(T entityIn, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch, CallbackInfo ci) {
 		if (!master.equals("${modid}")) {
-		    if (!${JavaModName}PlayerAnimationAPI.animations.isEmpty())
-		        ${JavaModName}PlayerAnimationAPI.animations.clear();
+			if (!${JavaModName}PlayerAnimationAPI.animations.isEmpty())
+				${JavaModName}PlayerAnimationAPI.animations.clear();
 			return;
-	    }
+		}
 		PlayerModel<T> model = (PlayerModel<T>) (Object) this;
 		Player player = null;
 		if (entityIn instanceof Player player_)
-		    player = player_;
+			player = player_;
 		else
-		    return;
+			return;
 		CompoundTag data = player.getPersistentData();
 		String playingAnimation = data.getString("PlayerCurrentAnimation");
 		boolean overrideAnimation = data.getBoolean("OverrideCurrentAnimation");
 		boolean firstPerson = data.getBoolean("FirstPersonAnimation");
 		if (data.getBoolean("ResetPlayerAnimation")) {
-		    data.remove("ResetPlayerAnimation");
-            playingAnimation = "";
-		    ${JavaModName}PlayerAnimationAPI.active_animations.put(player, null);
+			data.remove("ResetPlayerAnimation");
+			data.remove("LastAnimationProgress");
+			data.remove("PlayedSoundTimes");
+			${JavaModName}PlayerAnimationAPI.active_animations.put(player, null);
 		}
 		if (playingAnimation.isEmpty()) {
 			return;
@@ -53,6 +54,8 @@ public abstract class PlayerAnimationMixin<T extends LivingEntity> {
 		if (overrideAnimation) {
 			data.putBoolean("OverrideCurrentAnimation", false);
 			data.remove("PlayerAnimationProgress");
+			data.remove("LastAnimationProgress");
+			data.remove("PlayedSoundTimes");
 			firstPerson = data.getBoolean("FirstPersonAnimation");
 			${JavaModName}PlayerAnimationAPI.active_animations.put(player, null);
 		}
@@ -60,8 +63,8 @@ public abstract class PlayerAnimationMixin<T extends LivingEntity> {
 		if (animation == null) {
 			animation = ${JavaModName}PlayerAnimationAPI.animations.get(playingAnimation);
 			if (animation == null) {
-			    ${JavaModName}.LOGGER.info("Attepted to play null animation " + playingAnimation + ", did animations fail to load?");
-			    return;
+				${JavaModName}.LOGGER.info("Attepted to play null animation " + playingAnimation + ", did animations fail to load?");
+				return;
 			}
 			${JavaModName}PlayerAnimationAPI.active_animations.put(player, animation);
 		}
@@ -76,19 +79,53 @@ public abstract class PlayerAnimationMixin<T extends LivingEntity> {
 			float deltaTime = (ageInTicks - lastTickTime) / 20f; // Convert ticks to seconds
 			animationProgress += deltaTime;
 			data.putFloat("PlayerAnimationProgress", animationProgress);
-            data.putFloat("LastTickTime", ageInTicks);
+			data.putFloat("LastTickTime", ageInTicks);
+			float lastAnimationProgress = data.getFloat("LastAnimationProgress");
+			ListTag playedSoundsTag = data.getList("PlayedSoundTimes", Tag.TAG_FLOAT);
+			Set<Float> playedSoundTimes = new HashSet<>();
+			for (int i = 0; i < playedSoundsTag.size(); i++) {
+				playedSoundTimes.add(playedSoundsTag.getFloat(i));
+			}
+			// Play any sound keyframes
+			for (Map.Entry<Float, String> soundEntry : animation.soundEffects.entrySet()) {
+				float soundTime = soundEntry.getKey();
+				String soundId = soundEntry.getValue();
+				if (playedSoundTimes.contains(soundTime)) {
+					continue;
+				}
+				boolean shouldPlay = false;
+				if (lastAnimationProgress <= animationProgress) {
+					shouldPlay = lastAnimationProgress < soundTime && animationProgress >= soundTime;
+				} else {
+					shouldPlay = lastAnimationProgress < soundTime || animationProgress >= soundTime;
+				}
+				if (shouldPlay && player.level() instanceof ClientLevel clientLevel) {
+					clientLevel.playLocalSound(
+						player.getX(), player.getY(), player.getZ(),
+						BuiltInRegistries.SOUND_EVENT.get(ResourceLocation.parse(soundId)),
+						SoundSource.NEUTRAL, 1.0F, 1.0F, false
+					);
+					playedSoundsTag.add(FloatTag.valueOf(soundTime));
+				}
+			}
+			data.put("PlayedSoundTimes", playedSoundsTag);
+			data.putFloat("LastAnimationProgress", animationProgress);
 			if (animationProgress >= animation.length) {
 				if (!animation.hold_on_last_frame && !animation.loop) {
 					data.remove("PlayerCurrentAnimation");
 					data.remove("PlayerAnimationProgress");
-				    data.putBoolean("ResetPlayerAnimation", true);
-				    data.putBoolean("FirstPersonAnimation", false);
-				    ${JavaModName}PlayerAnimationAPI.active_animations.put(player, null);
-				    animationProgress = animation.length;
+					data.remove("LastAnimationProgress");
+					data.remove("PlayedSoundTimes");
+					data.putBoolean("ResetPlayerAnimation", true);
+					data.putBoolean("FirstPersonAnimation", false);
+					${JavaModName}PlayerAnimationAPI.active_animations.put(player, null);
+					animationProgress = animation.length;
 				} else if (animation.hold_on_last_frame) {
-				    data.putFloat("PlayerAnimationProgress", animation.length);
+					data.putFloat("PlayerAnimationProgress", animation.length);
 				} else if (animation.loop) {
-				    data.remove("PlayerAnimationProgress");
+					data.remove("PlayerAnimationProgress");
+					data.remove("LastAnimationProgress");
+					data.remove("PlayedSoundTimes");
 				}
 			}
 		}
@@ -131,43 +168,43 @@ public abstract class PlayerAnimationMixin<T extends LivingEntity> {
 	}
 
 	private void resetModelPose(PlayerModel<T> model) {
-        model.leftLeg.setPos(1.9F, 12.0F, 0.0F);
-        model.rightLeg.setPos(- 1.9F, 12.0F, 0.0F);
-        model.head.setPos(0.0F, 0.0F, 0.0F);
-        model.rightArm.z = 0.0F;
-        model.rightArm.x = - 5.0F;
-        model.leftArm.z = 0.0F;
-        model.leftArm.x = 5.0F;
-        model.body.xRot = 0.0F;
-        model.rightLeg.z = 0.1F;
-        model.leftLeg.z = 0.1F;
-        model.rightLeg.y = 12.0F;
-        model.leftLeg.y = 12.0F;
-        model.head.y = 0.0F;
-        model.head.zRot = 0f;
-        model.body.y = 0.0F;
-        model.body.x = 0f;
-        model.body.z = 0f;
-        model.body.yRot = 0;
-        model.body.zRot = 0;
-        model.head.xScale = ModelPart.DEFAULT_SCALE;
-        model.head.yScale = ModelPart.DEFAULT_SCALE;
-        model.head.zScale = ModelPart.DEFAULT_SCALE;
-        model.body.xScale = ModelPart.DEFAULT_SCALE;
-        model.body.yScale = ModelPart.DEFAULT_SCALE;
-        model.body.zScale = ModelPart.DEFAULT_SCALE;
-        model.rightArm.xScale = ModelPart.DEFAULT_SCALE;
-        model.rightArm.yScale = ModelPart.DEFAULT_SCALE;
-        model.rightArm.zScale = ModelPart.DEFAULT_SCALE;
-        model.leftArm.xScale = ModelPart.DEFAULT_SCALE;
-        model.leftArm.yScale = ModelPart.DEFAULT_SCALE;
-        model.leftArm.zScale = ModelPart.DEFAULT_SCALE;
-        model.rightLeg.xScale = ModelPart.DEFAULT_SCALE;
-        model.rightLeg.yScale = ModelPart.DEFAULT_SCALE;
-        model.rightLeg.zScale = ModelPart.DEFAULT_SCALE;
-        model.leftLeg.xScale = ModelPart.DEFAULT_SCALE;
-        model.leftLeg.yScale = ModelPart.DEFAULT_SCALE;
-        model.leftLeg.zScale = ModelPart.DEFAULT_SCALE;
+		model.leftLeg.setPos(1.9F, 12.0F, 0.0F);
+		model.rightLeg.setPos(- 1.9F, 12.0F, 0.0F);
+		model.head.setPos(0.0F, 0.0F, 0.0F);
+		model.rightArm.z = 0.0F;
+		model.rightArm.x = - 5.0F;
+		model.leftArm.z = 0.0F;
+		model.leftArm.x = 5.0F;
+		model.body.xRot = 0.0F;
+		model.rightLeg.z = 0.1F;
+		model.leftLeg.z = 0.1F;
+		model.rightLeg.y = 12.0F;
+		model.leftLeg.y = 12.0F;
+		model.head.y = 0.0F;
+		model.head.zRot = 0f;
+		model.body.y = 0.0F;
+		model.body.x = 0f;
+		model.body.z = 0f;
+		model.body.yRot = 0;
+		model.body.zRot = 0;
+		model.head.xScale = ModelPart.DEFAULT_SCALE;
+		model.head.yScale = ModelPart.DEFAULT_SCALE;
+		model.head.zScale = ModelPart.DEFAULT_SCALE;
+		model.body.xScale = ModelPart.DEFAULT_SCALE;
+		model.body.yScale = ModelPart.DEFAULT_SCALE;
+		model.body.zScale = ModelPart.DEFAULT_SCALE;
+		model.rightArm.xScale = ModelPart.DEFAULT_SCALE;
+		model.rightArm.yScale = ModelPart.DEFAULT_SCALE;
+		model.rightArm.zScale = ModelPart.DEFAULT_SCALE;
+		model.leftArm.xScale = ModelPart.DEFAULT_SCALE;
+		model.leftArm.yScale = ModelPart.DEFAULT_SCALE;
+		model.leftArm.zScale = ModelPart.DEFAULT_SCALE;
+		model.rightLeg.xScale = ModelPart.DEFAULT_SCALE;
+		model.rightLeg.yScale = ModelPart.DEFAULT_SCALE;
+		model.rightLeg.zScale = ModelPart.DEFAULT_SCALE;
+		model.leftLeg.xScale = ModelPart.DEFAULT_SCALE;
+		model.leftLeg.yScale = ModelPart.DEFAULT_SCALE;
+		model.leftLeg.zScale = ModelPart.DEFAULT_SCALE;
 	}
 
 	private ModelPart getModelPart(PlayerModel<T> model, String boneName) {

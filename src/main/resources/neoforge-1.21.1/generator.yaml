@@ -13,6 +13,8 @@ base_templates:
     name: "@SRCROOT/@BASEPACKAGEPATH/mixin/CameraAccessor.java"
   - template: firstperson/entity_render_dispatcher_mixin.java.ftl
     name: "@SRCROOT/@BASEPACKAGEPATH/mixin/EntityRenderDispatcherMixin.java"
+  - template: firstperson/humanoid_armor_layer_mixin.java.ftl
+    name: "@SRCROOT/@BASEPACKAGEPATH/mixin/HumanoidArmorLayerMixin.java"
   - template: firstperson/item_in_hand_renderer_mixin.java.ftl
     name: "@SRCROOT/@BASEPACKAGEPATH/mixin/ItemInHandRendererMixin.java"
   - template: firstperson/level_renderer_mixin.java.ftl
