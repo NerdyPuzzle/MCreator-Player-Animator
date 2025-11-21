@@ -32,6 +32,8 @@ public abstract class HumanoidArmorLayerMixin<T extends LivingEntity, M extends 
 		if (!master.equals("${modid}")) {
 			return;
 	    }
+	    if (player == null)
+	        return;
 	    CompoundTag playerData = player.getPersistentData();
 	    Minecraft mc = Minecraft.getInstance();
 	    if (player != null && player.getPersistentData().getBoolean("FirstPersonAnimation") && mc.options.getCameraType().isFirstPerson() && mc.player == player) {

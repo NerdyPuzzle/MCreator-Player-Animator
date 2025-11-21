@@ -35,10 +35,12 @@ public abstract class HumanoidArmorLayerMixin<S extends HumanoidRenderState, M e
 		if (!master.equals("${modid}")) {
 			return;
 	    }
-	    CompoundTag playerData = player.getPersistentData();
-	    Minecraft mc = Minecraft.getInstance();
 	    if (model.hat.skipDraw)
 	        hideArmorParts(model, false);
+	    if (player == null)
+	        return;
+	    CompoundTag playerData = player.getPersistentData();
+	    Minecraft mc = Minecraft.getInstance();
 	    if (player != null && player.getPersistentData().getBooleanOr("FirstPersonAnimation", false) && mc.options.getCameraType().isFirstPerson() && mc.player == player) {
 	        hideArmorParts(model, true);
 	        playerData.putInt("setNullRender", 5);
