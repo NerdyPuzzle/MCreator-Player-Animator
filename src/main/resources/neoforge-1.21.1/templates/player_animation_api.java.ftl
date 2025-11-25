@@ -4,11 +4,14 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonPrimitive;
+import com.google.gson.Gson;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 public class ${JavaModName}PlayerAnimationAPI {
 	public static final Map<String, PlayerAnimation> animations = new Object2ObjectOpenHashMap<>();
 	public static final Map<Player, PlayerAnimation> active_animations = new Object2ObjectOpenHashMap<>();
-	public static final Map<UUID, Boolean> initialized = new HashMap<>();
 
 	public static void loadAnimationFile(JsonObject file) {
 		JsonObject animationsObject = file.get("animations").getAsJsonObject();
@@ -299,103 +302,66 @@ public class ${JavaModName}PlayerAnimationAPI {
 		}
 	}
 
-	@EventBusSubscriber
+	@EventBusSubscriber(Dist.CLIENT)
 	private static class AnimationLoader {
 		@SubscribeEvent
-		public static void loadAnimations(PlayerEvent.PlayerLoggedInEvent event) {
-			if (${JavaModName}PlayerAnimationAPI.initialized.get(event.getEntity().getUUID()) == null) {
-				if (event.getEntity() instanceof ServerPlayer player) {
-					ServerLevel level = (ServerLevel) player.level();
-					class Output implements PackResources.ResourceOutput {
-						private List<JsonObject> jsonObjects;
-						private PackResources packResources;
-						private List<String> namespaces;
+		public static void onClientSetup(FMLClientSetupEvent event) {
+			event.enqueueWork(() -> {
+				loadClientSideAnimations();
+			});
+		}
 
-						public Output(List<JsonObject> jsonObjects, List<String> namespaces) {
-							this.jsonObjects = jsonObjects;
-							this.namespaces = namespaces;
-						}
-
-						public void setPackResources(PackResources packResources) {
-							this.packResources = packResources;
-						}
-
-						@Override
-						public void accept(ResourceLocation resourceLocation, IoSupplier<InputStream> ioSupplier) {
-							try {
-								JsonObject jsonObject = new com.google.gson.Gson()
-										.fromJson(new java.io.BufferedReader(new java.io.InputStreamReader(ioSupplier.get(), java.nio.charset.StandardCharsets.UTF_8)).lines().collect(Collectors.joining("\n")), JsonObject.class);
-								this.jsonObjects.add(jsonObject);
-								this.namespaces.add(resourceLocation.getNamespace());
-							} catch (Exception e) {
-							}
+		private static void loadClientSideAnimations() {
+			List<JsonObject> jsons = new ArrayList<>();
+			List<String> namespaces = new ArrayList<>();
+			ModList.get().forEachModFile(modFile -> {
+				String modId = modFile.getModInfos().get(0).getModId();
+				Path rootPath = modFile.findResource("data");
+				if (rootPath == null || !Files.exists(rootPath)) {
+					return;
+				}
+				try {
+					Path animationsPath = rootPath.resolve(modId).resolve("bedrock_animations");
+					if (Files.exists(animationsPath) && Files.isDirectory(animationsPath)) {
+						try (Stream<Path> paths = Files.walk(animationsPath)) {
+							paths.filter(Files::isRegularFile)
+								 .filter(path -> path.toString().endsWith(".json"))
+								 .forEach(animationFile -> {
+									 try {
+										 String content = Files.readString(animationFile, StandardCharsets.UTF_8);
+										 JsonObject jsonObject = new Gson().fromJson(content, JsonObject.class);
+										 jsons.add(jsonObject);
+										 namespaces.add(modId);
+									 } catch (Exception e) {
+										 System.err.println("Failed to load animation file: " + animationFile + " - " + e.getMessage());
+									 }
+								 });
 						}
 					}
-					List<JsonObject> jsons = new ArrayList<>();
-					List<String> namespaces = new ArrayList<>();
-					Output output = new Output(jsons, namespaces);
-					ResourceManager rm = level.getServer().getResourceManager();
-					rm.listPacks().forEach(resource -> {
-						for (String namespace : resource.getNamespaces(PackType.SERVER_DATA)) {
-							output.setPackResources(resource);
-							resource.listResources(PackType.SERVER_DATA, namespace, "bedrock_animations", output);
-						}
-					});
-					sendAnimationsInBatches(player, jsons, namespaces);
-					${JavaModName}PlayerAnimationAPI.initialized.put(player.getUUID(), true);
+				} catch (Exception e) {
+					System.err.println("Failed to process animations for mod: " + modId + " - " + e.getMessage());
 				}
+			});
+			if (!jsons.isEmpty()) {
+				loadAnimations(jsons, namespaces);
 			}
 		}
 
-		private static void sendAnimationsInBatches(ServerPlayer player, List<JsonObject> jsons, List<String> namespaces) {
-			final int MAX_CHARS = 30000; // Safety buffer below 32767
-			final int ANIMATIONS_WRAPPER_OVERHEAD = "{\"animations\":{}}".length();
-
-			JsonObject currentBatch = new JsonObject();
-			JsonObject animationsObject = new JsonObject();
-			currentBatch.add("animations", animationsObject);
-
-			int currentSize = ANIMATIONS_WRAPPER_OVERHEAD;
-			int animationCount = 0;
+		private static void loadAnimations(List<JsonObject> jsons, List<String> namespaces) {
 			int namespaceIndex = 0;
-
 			for (JsonObject animationJson : jsons) {
-				// Extract the animations from each JSON
 				JsonObject sourceAnimations = animationJson.getAsJsonObject("animations");
-
 				if (sourceAnimations != null) {
+					JsonObject namespacedAnimations = new JsonObject();
+					JsonObject animationsWrapper = new JsonObject();
 					for (Map.Entry<String, JsonElement> entry : sourceAnimations.entrySet()) {
 						String animationName = namespaces.get(namespaceIndex) + ":" + entry.getKey();
-						JsonElement animationData = entry.getValue();
-
-						// Calculate size this animation would add
-						String animationString = "\"" + animationName + "\":" + animationData.toString();
-						int animationSize = animationString.length() + 1; // +1 for comma
-
-						// Check if adding this would exceed limit
-						if (currentSize + animationSize > MAX_CHARS && animationCount > 0) {
-							PacketDistributor.sendToPlayer(player,
-								new LoadPlayerAnimationMessage(currentBatch.toString()));
-
-							currentBatch = new JsonObject();
-							animationsObject = new JsonObject();
-							currentBatch.add("animations", animationsObject);
-							currentSize = ANIMATIONS_WRAPPER_OVERHEAD;
-							animationCount = 0;
-						}
-
-						animationsObject.add(animationName, animationData);
-						currentSize += animationSize;
-						animationCount++;
+						namespacedAnimations.add(animationName, entry.getValue());
 					}
+					animationsWrapper.add("animations", namespacedAnimations);
+					${JavaModName}PlayerAnimationAPI.loadAnimationFile(animationsWrapper);
 				}
 				namespaceIndex++;
-			}
-
-			// Send final batch if it has any animations
-			if (animationCount > 0) {
-				PacketDistributor.sendToPlayer(player,
-					new LoadPlayerAnimationMessage(currentBatch.toString()));
 			}
 		}
 	}

@@ -1,6 +1,4 @@
 base_templates:
-  - template: animation_load_packet.java.ftl
-    name: "@SRCROOT/@BASEPACKAGEPATH/network/LoadPlayerAnimationMessage.java"
   - template: animation_play_packet.java.ftl
     name: "@SRCROOT/@BASEPACKAGEPATH/network/PlayPlayerAnimationMessage.java"
   - template: player_animation_api.java.ftl
