@@ -25,6 +25,7 @@
   "client": [
     "PlayerAnimationMixin",
     "PlayerAnimationRendererMixin",
+    "ItemInHandLayerMixin",
     "CameraAccessor",
     "EntityRenderDispatcherMixin",
     "HumanoidArmorLayerMixin",

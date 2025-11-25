@@ -7,6 +7,8 @@ base_templates:
     name: "@SRCROOT/@BASEPACKAGEPATH/mixin/PlayerAnimationMixin.java"
   - template: player_renderer_mixin.java.ftl
     name: "@SRCROOT/@BASEPACKAGEPATH/mixin/PlayerAnimationRendererMixin.java"
+  - template: item_in_hand_layer_mixin.java.ftl
+    name: "@SRCROOT/@BASEPACKAGEPATH/mixin/ItemInHandLayerMixin.java"
   - template: firstperson/camera_accessor.java.ftl
     name: "@SRCROOT/@BASEPACKAGEPATH/mixin/CameraAccessor.java"
   - template: firstperson/entity_render_dispatcher_mixin.java.ftl
