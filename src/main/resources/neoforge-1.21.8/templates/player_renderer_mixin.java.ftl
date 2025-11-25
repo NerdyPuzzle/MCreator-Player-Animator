@@ -2,11 +2,12 @@ package ${package}.mixin;
 
 @Mixin(PlayerRenderer.class)
 public abstract class PlayerAnimationRendererMixin extends LivingEntityRenderer<AbstractClientPlayer, PlayerRenderState, PlayerModel> {
+    private String master = null;
+    private Minecraft mc = Minecraft.getInstance();
+
     public PlayerAnimationRendererMixin(EntityRendererProvider.Context context, boolean slim) {
         super(null, null, 0.5f);
     }
-
-	private String master = null;
 
     @Inject(method = "Lnet/minecraft/client/renderer/entity/player/PlayerRenderer;setupRotations(Lnet/minecraft/client/renderer/entity/state/PlayerRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;FF)V", at = @At("RETURN"))
     private void setupRotations(PlayerRenderState renderState, PoseStack poseStack, float bodyRot, float scale_, CallbackInfo ci) {
@@ -27,6 +28,7 @@ public abstract class PlayerAnimationRendererMixin extends LivingEntityRenderer<
 	    ${JavaModName}PlayerAnimationAPI.PlayerBone bone = animation.bones.get("body");
         if (bone == null)
             return;
+		boolean firstPerson = player.getPersistentData().getBooleanOr("FirstPersonAnimation", false) && mc.options.getCameraType().isFirstPerson() && player == mc.player && mc.screen == null;
         float animationProgress = player.getPersistentData().getFloatOr("PlayerAnimationProgress", 0);
 		Vec3 scale = ${JavaModName}PlayerAnimationAPI.PlayerBone.interpolate(bone.scales, animationProgress);
 		if (scale != null) {
@@ -34,13 +36,16 @@ public abstract class PlayerAnimationRendererMixin extends LivingEntityRenderer<
 		}
 		Vec3 position = ${JavaModName}PlayerAnimationAPI.PlayerBone.interpolate(bone.positions, animationProgress);
 		if (position != null) {
-			poseStack.translate((float) -position.x * 0.0625f, (float) (position.y * 0.0625f), (float) position.z * 0.0625f);
+		    if (!firstPerson)
+			    poseStack.translate((float) -position.x * 0.0625f, (float) (position.y * 0.0625f), (float) position.z * 0.0625f);
 		}
 		Vec3 rotation = ${JavaModName}PlayerAnimationAPI.PlayerBone.interpolate(bone.rotations, animationProgress);
 		if (rotation != null) {
-			poseStack.mulPose(Axis.ZP.rotationDegrees((float) rotation.z));
+		    if (!firstPerson)
+			    poseStack.mulPose(Axis.ZP.rotationDegrees((float) rotation.z));
 			poseStack.mulPose(Axis.YP.rotationDegrees((float) -rotation.y));
-			poseStack.mulPose(Axis.XP.rotationDegrees((float) -rotation.x));
+			if (!firstPerson)
+			    poseStack.mulPose(Axis.XP.rotationDegrees((float) -rotation.x));
 		}
 	}
 }

@@ -4,6 +4,7 @@ package ${package}.mixin;
 public abstract class HumanoidArmorLayerMixin<S extends HumanoidRenderState, M extends HumanoidModel<S>, A extends HumanoidModel<S>> {
     private String master = null;
     private Player player = null;
+    private Minecraft mc = Minecraft.getInstance();
 
 	@Inject(method = "Lnet/minecraft/client/renderer/entity/layers/HumanoidArmorLayer;render(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/client/renderer/entity/state/HumanoidRenderState;FF)V", at = @At("HEAD"))
 	private void render(PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, S renderState, float yRot, float xRot, CallbackInfo ci) {
@@ -40,8 +41,7 @@ public abstract class HumanoidArmorLayerMixin<S extends HumanoidRenderState, M e
 	    if (player == null)
 	        return;
 	    CompoundTag playerData = player.getPersistentData();
-	    Minecraft mc = Minecraft.getInstance();
-	    if (player != null && player.getPersistentData().getBooleanOr("FirstPersonAnimation", false) && mc.options.getCameraType().isFirstPerson() && mc.player == player) {
+	    if (player != null && player.getPersistentData().getBooleanOr("FirstPersonAnimation", false) && mc.options.getCameraType().isFirstPerson() && mc.player == player && mc.screen == null) {
 	        hideArmorParts(model, true);
 	        playerData.putInt("setNullRender", 5);
 	    } else if (playerData.contains("setNullRender")) {

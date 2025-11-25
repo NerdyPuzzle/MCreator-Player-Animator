@@ -3,6 +3,7 @@ package ${package}.mixin;
 @Mixin(PlayerModel.class)
 public abstract class PlayerAnimationMixin<T extends LivingEntity> {
 	private String master = null;
+	private Minecraft mc = Minecraft.getInstance();
 
 	@Inject(method = "setupAnim", at = @At(value = "HEAD"))
 	public void setupPivot(T entityIn, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch, CallbackInfo ci) {
@@ -41,7 +42,7 @@ public abstract class PlayerAnimationMixin<T extends LivingEntity> {
 		CompoundTag data = player.getPersistentData();
 		String playingAnimation = data.getString("PlayerCurrentAnimation");
 		boolean overrideAnimation = data.getBoolean("OverrideCurrentAnimation");
-		boolean firstPerson = data.getBoolean("FirstPersonAnimation");
+		boolean firstPerson = data.getBoolean("FirstPersonAnimation") && mc.options.getCameraType().isFirstPerson() && player == mc.player && mc.screen == null;
 		if (data.getBoolean("ResetPlayerAnimation")) {
 			data.remove("ResetPlayerAnimation");
 			data.remove("LastAnimationProgress");
@@ -51,12 +52,16 @@ public abstract class PlayerAnimationMixin<T extends LivingEntity> {
 		if (playingAnimation.isEmpty()) {
 			return;
 		}
+		if (firstPerson) {
+			player.yBodyRotO = player.yHeadRotO;
+			player.yBodyRot = player.yHeadRot;
+		}
 		if (overrideAnimation) {
 			data.putBoolean("OverrideCurrentAnimation", false);
 			data.remove("PlayerAnimationProgress");
 			data.remove("LastAnimationProgress");
 			data.remove("PlayedSoundTimes");
-			firstPerson = data.getBoolean("FirstPersonAnimation");
+			firstPerson = data.getBoolean("FirstPersonAnimation") && mc.options.getCameraType().isFirstPerson() && player == mc.player && mc.screen == null;
 			${JavaModName}PlayerAnimationAPI.active_animations.put(player, null);
 		}
 		${JavaModName}PlayerAnimationAPI.PlayerAnimation animation = ${JavaModName}PlayerAnimationAPI.active_animations.get(player);
@@ -158,6 +163,32 @@ public abstract class PlayerAnimationMixin<T extends LivingEntity> {
 				modelPart.yScale = (float) scale.y;
 				modelPart.zScale = (float) scale.z;
 			}
+            boolean firstPersonArms = firstPerson && (boneName.equals("right_arm") || boneName.equals("left_arm"));
+		    if (firstPersonArms) {
+			    float frameBuffer = 0.09f;
+			    float timeLeft = animation.length - animationProgress;
+			    float fpWeight = 1.0f;
+			    boolean rightArm = boneName.equals("right_arm");
+			    if (!animation.loop && timeLeft < frameBuffer) {
+				    fpWeight = Math.max(0f, timeLeft / frameBuffer);
+			    }
+			    if (fpWeight > 0) {
+				    float pitchRadians = (float) Math.toRadians(player.getXRot());
+				    modelPart.xRot += pitchRadians * fpWeight;
+				    float yRotCorrection = pitchRadians * (rightArm ? -0.42f : 0.42f);
+				    modelPart.yRot += yRotCorrection * fpWeight;
+				    float zRotCorrection = pitchRadians * (rightArm ? -0.34f : 0.34f);
+				    modelPart.zRot += zRotCorrection * fpWeight;
+				    float originalY = modelPart.y;
+				    float originalZ = modelPart.z;
+				    float cosP = (float) Math.cos(pitchRadians);
+				    float sinP = (float) Math.sin(pitchRadians);
+				    float targetY = originalY * cosP - originalZ * sinP;
+				    float targetZ = originalY * sinP + originalZ * cosP;
+				    modelPart.y = originalY + (targetY - originalY) * fpWeight;
+				    modelPart.z = originalZ + (targetZ - originalZ) * fpWeight;
+			    }
+		    }
 		}
 		model.leftPants.copyFrom(model.leftLeg);
 		model.rightPants.copyFrom(model.rightLeg);
