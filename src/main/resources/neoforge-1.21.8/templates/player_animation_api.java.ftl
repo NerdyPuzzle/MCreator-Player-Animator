@@ -303,7 +303,7 @@ public class ${JavaModName}PlayerAnimationAPI {
 	}
 
 	@EventBusSubscriber(Dist.CLIENT)
-	private static class AnimationLoader {
+	public static class AnimationLoader {
 		@SubscribeEvent
 		public static void onClientSetup(FMLClientSetupEvent event) {
 			event.enqueueWork(() -> {
