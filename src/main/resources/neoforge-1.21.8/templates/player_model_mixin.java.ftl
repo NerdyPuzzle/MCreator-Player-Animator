@@ -26,14 +26,16 @@ public abstract class PlayerAnimationMixin {
 
 	@Inject(method = "Lnet/minecraft/client/model/PlayerModel;setupAnim(Lnet/minecraft/client/renderer/entity/state/PlayerRenderState;)V", at = @At(value = "TAIL"))
 	public void setupAnim(PlayerRenderState renderState, CallbackInfo ci) {
-		Player player = (Player) renderState.getRenderData(${JavaModName}PlayerAnimationAPI.ClientAttachments.PLAYER);
-		if (player == null)
-			return;
+		if (renderState.ageInTicks <= 0)
+		    return;
 		if (!master.equals("${modid}")) {
 			if (!${JavaModName}PlayerAnimationAPI.animations.isEmpty())
 				${JavaModName}PlayerAnimationAPI.animations.clear();
 			return;
 		}
+		Player player = (Player) renderState.getRenderData(${JavaModName}PlayerAnimationAPI.ClientAttachments.PLAYER);
+		if (player == null)
+			return;
 		PlayerModel model = (PlayerModel) (Object) this;
 		CompoundTag data = player.getPersistentData();
 		String playingAnimation = data.getStringOr("PlayerCurrentAnimation", "");
@@ -132,6 +134,8 @@ public abstract class PlayerAnimationMixin {
 				}
 			}
 		}
+		if (!data.getBooleanOr("FirstPersonAnimation", false) && mc.options.getCameraType().isFirstPerson() && player == mc.player && mc.screen == null)
+		    return;
 		// Apply each bone's transformations
 		for (Map.Entry<String, ${JavaModName}PlayerAnimationAPI.PlayerBone> entry : animation.bones.entrySet()) {
 			String boneName = entry.getKey();

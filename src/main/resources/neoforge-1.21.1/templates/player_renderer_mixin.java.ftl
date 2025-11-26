@@ -34,9 +34,7 @@ public abstract class PlayerAnimationRendererMixin extends LivingEntityRenderer<
 			this.model.rightPants.visible = false;
 			this.model.jacket.visible = false;
 			this.model.rightArm.visible = true;
-			this.model.rightSleeve.visible = true;
 			this.model.leftArm.visible = true;
-			this.model.leftSleeve.visible = true;
 		}
 	}
 

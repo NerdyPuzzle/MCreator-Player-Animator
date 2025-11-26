@@ -28,6 +28,8 @@ public abstract class PlayerAnimationMixin<T extends LivingEntity> {
 
 	@Inject(method = "setupAnim", at = @At(value = "TAIL"))
 	public void setupAnim(T entityIn, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch, CallbackInfo ci) {
+		if (ageInTicks <= 0)
+		    return;
 		if (!master.equals("${modid}")) {
 			if (!${JavaModName}PlayerAnimationAPI.animations.isEmpty())
 				${JavaModName}PlayerAnimationAPI.animations.clear();
@@ -78,6 +80,7 @@ public abstract class PlayerAnimationMixin<T extends LivingEntity> {
 			animationProgress = 0f;
 			data.putFloat("PlayerAnimationProgress", animationProgress);
 			data.putFloat("LastTickTime", ageInTicks);
+			data.putFloat("LastAnimationProgress", 0f);
 		} else {
 			animationProgress = data.getFloat("PlayerAnimationProgress");
 			float lastTickTime = data.getFloat("LastTickTime");
@@ -134,6 +137,8 @@ public abstract class PlayerAnimationMixin<T extends LivingEntity> {
 				}
 			}
 		}
+		if (!data.getBoolean("FirstPersonAnimation") && mc.options.getCameraType().isFirstPerson() && player == mc.player && mc.screen == null)
+		    return;
 		// Apply each bone's transformations
 		for (Map.Entry<String, ${JavaModName}PlayerAnimationAPI.PlayerBone> entry : animation.bones.entrySet()) {
 			String boneName = entry.getKey();
