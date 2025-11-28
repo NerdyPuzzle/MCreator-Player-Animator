@@ -27,7 +27,7 @@ public abstract class PlayerAnimationMixin {
 	@Inject(method = "Lnet/minecraft/client/model/PlayerModel;setupAnim(Lnet/minecraft/client/renderer/entity/state/PlayerRenderState;)V", at = @At(value = "TAIL"))
 	public void setupAnim(PlayerRenderState renderState, CallbackInfo ci) {
 		if (renderState.ageInTicks <= 0)
-		    return;
+			return;
 		if (!master.equals("${modid}")) {
 			if (!${JavaModName}PlayerAnimationAPI.animations.isEmpty())
 				${JavaModName}PlayerAnimationAPI.animations.clear();
@@ -56,7 +56,6 @@ public abstract class PlayerAnimationMixin {
 			player.yBodyRotO = player.yHeadRotO;
 			player.yBodyRot = player.yHeadRot;
 		}
-		float animationProgress;
 		if (overrideAnimation) {
 			firstPerson = data.getBooleanOr("FirstPersonAnimation", false) && mc.options.getCameraType().isFirstPerson() && player == mc.player && mc.screen == null;
 			${JavaModName}PlayerAnimationAPI.active_animations.put(player, null);
@@ -74,6 +73,9 @@ public abstract class PlayerAnimationMixin {
 			}
 			${JavaModName}PlayerAnimationAPI.active_animations.put(player, animation);
 		}
+		float animationProgress;
+		float lastAnimationProgress = data.getFloatOr("LastAnimationProgress", 0);
+		ListTag playedSoundsTag = data.getListOrEmpty("PlayedSoundTimes");
 		if (!data.contains("PlayerAnimationProgress")) {
 			animationProgress = 0f;
 			data.putFloat("PlayerAnimationProgress", animationProgress);
@@ -85,36 +87,6 @@ public abstract class PlayerAnimationMixin {
 			animationProgress += deltaTime;
 			data.putFloat("PlayerAnimationProgress", animationProgress);
 			data.putFloat("LastTickTime", renderState.ageInTicks);
-			float lastAnimationProgress = data.getFloatOr("LastAnimationProgress", 0);
-			ListTag playedSoundsTag = data.getListOrEmpty("PlayedSoundTimes");
-			Set<Float> playedSoundTimes = new HashSet<>();
-			for (int i = 0; i < playedSoundsTag.size(); i++) {
-				playedSoundTimes.add(playedSoundsTag.getFloatOr(i, 0));
-			}
-			// Play any sound keyframes
-			for (Map.Entry<Float, String> soundEntry : animation.soundEffects.entrySet()) {
-				float soundTime = soundEntry.getKey();
-				String soundId = soundEntry.getValue();
-				if (playedSoundTimes.contains(soundTime)) {
-					continue;
-				}
-				boolean shouldPlay = false;
-				if (lastAnimationProgress <= animationProgress) {
-					shouldPlay = lastAnimationProgress < soundTime && animationProgress >= soundTime;
-				} else {
-					shouldPlay = lastAnimationProgress < soundTime || animationProgress >= soundTime;
-				}
-				if (shouldPlay && player.level() instanceof ClientLevel clientLevel) {
-					clientLevel.playLocalSound(
-						player.getX(), player.getY(), player.getZ(),
-						BuiltInRegistries.SOUND_EVENT.getValue(ResourceLocation.parse(soundId)),
-						SoundSource.NEUTRAL, 1.0F, 1.0F, false
-					);
-					playedSoundsTag.add(FloatTag.valueOf(soundTime));
-				}
-			}
-			data.put("PlayedSoundTimes", playedSoundsTag);
-			data.putFloat("LastAnimationProgress", animationProgress);
 			if (animationProgress >= animation.length) {
 				if (!animation.hold_on_last_frame && !animation.loop) {
 					data.putBoolean("FirstPersonAnimation", false);
@@ -134,8 +106,38 @@ public abstract class PlayerAnimationMixin {
 				}
 			}
 		}
+		if (!animation.soundEffects.isEmpty()) {
+			Set<Float> playedSoundTimes = new HashSet<>();
+			for (int i = 0; i < playedSoundsTag.size(); i++) {
+				playedSoundTimes.add(playedSoundsTag.getFloatOr(i, 0));
+			}
+			// Play any sound keyframes
+			for (Map.Entry<Float, String> soundEntry : animation.soundEffects.entrySet()) {
+				float soundTime = soundEntry.getKey();
+				String soundId = soundEntry.getValue();
+				if (playedSoundTimes.contains(soundTime)) {
+					continue;
+				}
+				boolean shouldPlay = false;
+				if (lastAnimationProgress <= animationProgress) {
+					shouldPlay = lastAnimationProgress <= soundTime && animationProgress >= soundTime;
+				} else {
+					shouldPlay = lastAnimationProgress <= soundTime || animationProgress >= soundTime;
+				}
+				if (shouldPlay && player.level() instanceof ClientLevel clientLevel) {
+					clientLevel.playLocalSound(
+						player.getX(), player.getY(), player.getZ(),
+						BuiltInRegistries.SOUND_EVENT.getValue(ResourceLocation.parse(soundId)),
+						SoundSource.NEUTRAL, 1.0F, 1.0F, false
+					);
+					playedSoundsTag.add(FloatTag.valueOf(soundTime));
+				}
+			}
+			data.put("PlayedSoundTimes", playedSoundsTag);
+			data.putFloat("LastAnimationProgress", animationProgress);
+		}
 		if (!data.getBooleanOr("FirstPersonAnimation", false) && mc.options.getCameraType().isFirstPerson() && player == mc.player && mc.screen == null)
-		    return;
+			return;
 		// Apply each bone's transformations
 		for (Map.Entry<String, ${JavaModName}PlayerAnimationAPI.PlayerBone> entry : animation.bones.entrySet()) {
 			String boneName = entry.getKey();
@@ -165,32 +167,32 @@ public abstract class PlayerAnimationMixin {
 				modelPart.yScale = (float) scale.y;
 				modelPart.zScale = (float) scale.z;
 			}
-            boolean firstPersonArms = firstPerson && (boneName.equals("right_arm") || boneName.equals("left_arm"));
-		    if (firstPersonArms) {
-			    float frameBuffer = 0.09f;
-			    float timeLeft = animation.length - animationProgress;
-			    float fpWeight = 1.0f;
-			    boolean rightArm = boneName.equals("right_arm");
-			    if (!animation.loop && timeLeft < frameBuffer) {
-				    fpWeight = Math.max(0f, timeLeft / frameBuffer);
-			    }
-			    if (fpWeight > 0) {
-				    float pitchRadians = (float) Math.toRadians(player.getXRot());
-				    modelPart.xRot += pitchRadians * fpWeight;
-				    float yRotCorrection = pitchRadians * (rightArm ? -0.42f : 0.42f);
-				    modelPart.yRot += yRotCorrection * fpWeight;
-				    float zRotCorrection = pitchRadians * (rightArm ? -0.34f : 0.34f);
-				    modelPart.zRot += zRotCorrection * fpWeight;
-				    float originalY = modelPart.y;
-				    float originalZ = modelPart.z;
-				    float cosP = (float) Math.cos(pitchRadians);
-				    float sinP = (float) Math.sin(pitchRadians);
-				    float targetY = originalY * cosP - originalZ * sinP;
-				    float targetZ = originalY * sinP + originalZ * cosP;
-				    modelPart.y = originalY + (targetY - originalY) * fpWeight;
-				    modelPart.z = originalZ + (targetZ - originalZ) * fpWeight;
-			    }
-		    }
+			boolean firstPersonArms = firstPerson && (boneName.equals("right_arm") || boneName.equals("left_arm"));
+			if (firstPersonArms) {
+				float frameBuffer = 0.09f;
+				float timeLeft = animation.length - animationProgress;
+				float fpWeight = 1.0f;
+				boolean rightArm = boneName.equals("right_arm");
+				if (!animation.loop && timeLeft < frameBuffer) {
+					fpWeight = Math.max(0f, timeLeft / frameBuffer);
+				}
+				if (fpWeight > 0) {
+					float pitchRadians = (float) Math.toRadians(player.getXRot());
+					modelPart.xRot += pitchRadians * fpWeight;
+					float yRotCorrection = pitchRadians * (rightArm ? -0.42f : 0.42f);
+					modelPart.yRot += yRotCorrection * fpWeight;
+					float zRotCorrection = pitchRadians * (rightArm ? -0.34f : 0.34f);
+					modelPart.zRot += zRotCorrection * fpWeight;
+					float originalY = modelPart.y;
+					float originalZ = modelPart.z;
+					float cosP = (float) Math.cos(pitchRadians);
+					float sinP = (float) Math.sin(pitchRadians);
+					float targetY = originalY * cosP - originalZ * sinP;
+					float targetZ = originalY * sinP + originalZ * cosP;
+					modelPart.y = originalY + (targetY - originalY) * fpWeight;
+					modelPart.z = originalZ + (targetZ - originalZ) * fpWeight;
+				}
+			}
 		}
 	}
 
