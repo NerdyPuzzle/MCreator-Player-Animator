@@ -33,8 +33,8 @@ public abstract class ItemInHandLayerMixin {
 			}
 			Vec3 rotation = ${JavaModName}PlayerAnimationAPI.PlayerBone.interpolate(bone.rotations, animationProgress);
 			if (rotation != null) {
-				poseStack.mulPose(Axis.ZP.rotationDegrees((float) rotation.z));
-				poseStack.mulPose(Axis.YP.rotationDegrees((float) -rotation.y));
+				poseStack.mulPose(Axis.ZP.rotationDegrees((float) rotation.y));
+				poseStack.mulPose(Axis.YP.rotationDegrees((float) -rotation.z));
 				poseStack.mulPose(Axis.XP.rotationDegrees((float) -rotation.x));
 			}
 		}
