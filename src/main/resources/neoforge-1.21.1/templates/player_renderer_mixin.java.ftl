@@ -64,7 +64,7 @@ public abstract class PlayerAnimationRendererMixin extends LivingEntityRenderer<
 		Vec3 position = ${JavaModName}PlayerAnimationAPI.PlayerBone.interpolate(bone.positions, animationProgress);
 		if (position != null) {
 			if (!firstPerson)
-			    poseStack.translate((float) -position.x * 0.0625f, (float) (position.y * 0.0625f), (float) position.z * 0.0625f);
+			    poseStack.translate((float) -position.x * 0.0625f, (float) (position.y * 0.0625f) + 0.75f, (float) position.z * 0.0625f);
 		}
 		Vec3 rotation = ${JavaModName}PlayerAnimationAPI.PlayerBone.interpolate(bone.rotations, animationProgress);
 		if (rotation != null) {
@@ -73,6 +73,10 @@ public abstract class PlayerAnimationRendererMixin extends LivingEntityRenderer<
 			poseStack.mulPose(Axis.YP.rotationDegrees((float) -rotation.y));
 			if (!firstPerson)
 			    poseStack.mulPose(Axis.XP.rotationDegrees((float) -rotation.x));
+		}
+		if (position != null) {
+		    if (!firstPerson)
+		        poseStack.translate(0, -0.75f, 0);
 		}
 	}
 }
