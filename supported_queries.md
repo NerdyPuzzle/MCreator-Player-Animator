@@ -1,0 +1,49 @@
+### Supported molang queries:
+- query.anim_time
+- query.head_x_rotation
+- query.head_y_rotation
+- query.body_x_rotation
+- query.body_y_rotation
+- query.life_time
+- query.health
+- query.max_health
+- query.is_on_ground
+- query.is_in_water
+- query.is_sneaking
+- query.is_sprinting
+- query.is_swimming
+- query.is_riding
+- query.is_sleeping
+- query.is_alive
+- query.is_gliding
+- query.ground_speed
+- query.vertical_speed
+- query.speed
+- query.limb_swing
+- query.limb_swing_amount
+- query.modified_move_speed
+- query.walk_anim_speed
+- query.modified_distance_moved
+- query.hurt_time
+- query.death_time
+- query.swing_progress
+- query.is_using_item
+- query.use_item_interval
+- query.is_first_person
+- query.main_hand_item_use_duration
+- query.yaw_speed
+- query.position_delta_x
+- query.position_delta_y
+- query.position_delta_z
+
+### Supported math operations:
+- math.sin
+- math.cos
+- math.tan
+- math.abs
+- math.sqrt
+- math.pow
+- math.min
+- math.max
+- math.clamp
+- 

@@ -745,8 +745,8 @@ public class WorkspacePanelPlayerAnimations extends AbstractResourcePanel<String
             return new Vec3(v1.x + (v2.x - v1.x) * alpha, v1.y + (v2.y - v1.y) * alpha, v1.z + (v2.z - v1.z) * alpha);
         }
 
-        private Vec3 evalMolang(String expr, float time) {
-            expr = expr.replace("query.anim_time", String.valueOf(time));
+        private static Vec3 evalMolang(String expr, float time) {
+            expr = preprocessMolangQueries(expr, time);
             try {
                 if (expr.trim().startsWith("[") && expr.trim().endsWith("]")) {
                     String inner = expr.trim().substring(1, expr.trim().length() - 1);
@@ -764,8 +764,9 @@ public class WorkspacePanelPlayerAnimations extends AbstractResourcePanel<String
             }
         }
 
-        private float evalFloat(String expr, float time) {
-            expr = expr.replace("query.anim_time", String.valueOf(time)).trim().replace(" ", "");
+        private static float evalFloat(String expr, float time) {
+            if (expr == null || expr.isEmpty()) return 0.0f;
+            expr = expr.trim().replace(" ", "");
             String lower = expr.toLowerCase();
 
             if (lower.startsWith("math.sin(") && lower.endsWith(")")) {
@@ -774,16 +775,81 @@ public class WorkspacePanelPlayerAnimations extends AbstractResourcePanel<String
             if (lower.startsWith("math.cos(") && lower.endsWith(")")) {
                 return (float) Math.cos(Math.toRadians(evalFloat(expr.substring(9, expr.length() - 1), time)));
             }
+            if (lower.startsWith("math.tan(") && lower.endsWith(")")) {
+                return (float) Math.tan(Math.toRadians(evalFloat(expr.substring(9, expr.length() - 1), time)));
+            }
+            if (lower.startsWith("math.abs(") && lower.endsWith(")")) {
+                return Math.abs(evalFloat(expr.substring(9, expr.length() - 1), time));
+            }
+            if (lower.startsWith("math.sqrt(") && lower.endsWith(")")) {
+                return (float) Math.sqrt(evalFloat(expr.substring(10, expr.length() - 1), time));
+            }
+            if (lower.startsWith("math.pow(") && lower.endsWith(")")) {
+                String inner = expr.substring(9, expr.length() - 1);
+                int commaPos = findTopLevelComma(inner);
+                if (commaPos != -1) {
+                    float base = evalFloat(inner.substring(0, commaPos), time);
+                    float exp = evalFloat(inner.substring(commaPos + 1), time);
+                    return (float) Math.pow(base, exp);
+                }
+            }
+            if (lower.startsWith("math.min(") && lower.endsWith(")")) {
+                String inner = expr.substring(9, expr.length() - 1);
+                int commaPos = findTopLevelComma(inner);
+                if (commaPos != -1) {
+                    return Math.min(evalFloat(inner.substring(0, commaPos), time),
+                            evalFloat(inner.substring(commaPos + 1), time));
+                }
+            }
+            if (lower.startsWith("math.max(") && lower.endsWith(")")) {
+                String inner = expr.substring(9, expr.length() - 1);
+                int commaPos = findTopLevelComma(inner);
+                if (commaPos != -1) {
+                    return Math.max(evalFloat(inner.substring(0, commaPos), time),
+                            evalFloat(inner.substring(commaPos + 1), time));
+                }
+            }
+            if (lower.startsWith("math.clamp(") && lower.endsWith(")")) {
+                String inner = expr.substring(11, expr.length() - 1);
+                List<String> parts = new ArrayList<>();
+                int depth = 0;
+                int start = 0;
+                for (int i = 0; i < inner.length(); i++) {
+                    char c = inner.charAt(i);
+                    if (c == '(') depth++;
+                    else if (c == ')') depth--;
+                    else if (c == ',' && depth == 0) {
+                        parts.add(inner.substring(start, i));
+                        start = i + 1;
+                    }
+                }
+                parts.add(inner.substring(start));
+
+                if (parts.size() == 3) {
+                    float val = evalFloat(parts.get(0), time);
+                    float min = evalFloat(parts.get(1), time);
+                    float max = evalFloat(parts.get(2), time);
+                    return Math.max(min, Math.min(max, val));
+                }
+            }
 
             int depth = 0;
+
             for (int i = expr.length() - 1; i >= 0; i--) {
                 char c = expr.charAt(i);
                 if (c == ')') depth++;
                 else if (c == '(') depth--;
                 else if (depth == 0) {
-                    if (c == '+' || (c == '-' && i > 0 && !isOperator(expr.charAt(i - 1)))) {
-                        return c == '+' ? evalFloat(expr.substring(0, i), time) + evalFloat(expr.substring(i + 1), time)
-                                : evalFloat(expr.substring(0, i), time) - evalFloat(expr.substring(i + 1), time);
+                    if (c == '+') {
+                        return evalFloat(expr.substring(0, i), time) + evalFloat(expr.substring(i + 1), time);
+                    }
+                    else if (c == '-' && i > 0) {
+                        char prev = expr.charAt(i - 1);
+                        boolean isOperator = prev != '+' && prev != '-' && prev != '*' && prev != '/' && prev != '(' && prev != 'E' && prev != 'e';
+
+                        if (isOperator) {
+                            return evalFloat(expr.substring(0, i), time) - evalFloat(expr.substring(i + 1), time);
+                        }
                     }
                 }
             }
@@ -793,15 +859,17 @@ public class WorkspacePanelPlayerAnimations extends AbstractResourcePanel<String
                 char c = expr.charAt(i);
                 if (c == ')') depth++;
                 else if (c == '(') depth--;
-                else if (depth == 0 && (c == '*' || c == '/')) {
-                    return c == '*' ? evalFloat(expr.substring(0, i), time) * evalFloat(expr.substring(i + 1), time)
-                            : evalFloat(expr.substring(0, i), time) / evalFloat(expr.substring(i + 1), time);
+                else if (depth == 0) {
+                    if (c == '*') {
+                        return evalFloat(expr.substring(0, i), time) * evalFloat(expr.substring(i + 1), time);
+                    }
+                    if (c == '/') {
+                        float denominator = evalFloat(expr.substring(i + 1), time);
+                        return denominator == 0 ? 0 : evalFloat(expr.substring(0, i), time) / denominator;
+                    }
                 }
             }
 
-            if (expr.startsWith("(") && expr.endsWith(")")) {
-                return evalFloat(expr.substring(1, expr.length() - 1), time);
-            }
             if (expr.startsWith("-")) {
                 return -evalFloat(expr.substring(1), time);
             }
@@ -809,12 +877,63 @@ public class WorkspacePanelPlayerAnimations extends AbstractResourcePanel<String
             try {
                 return Float.parseFloat(expr);
             } catch (NumberFormatException e) {
-                return 0;
+                return 0.0f;
             }
         }
 
-        private boolean isOperator(char c) {
-            return c == '+' || c == '-' || c == '*' || c == '/';
+        private static String preprocessMolangQueries(String expr, float time) {
+            return expr
+                    .replace("query.anim_time", String.valueOf(time))
+                    .replace("query.head_x_rotation", "0")
+                    .replace("query.head_y_rotation", "0")
+                    .replace("query.body_x_rotation", "0")
+                    .replace("query.body_y_rotation", "0")
+                    .replace("query.life_time", "0")
+                    .replace("query.health", "0")
+                    .replace("query.max_health", "0")
+                    .replace("query.is_on_ground", "0")
+                    .replace("query.is_in_water", "0")
+                    .replace("query.is_in_water_or_rain", "0")
+                    .replace("query.is_sneaking", "0")
+                    .replace("query.is_sprinting", "0")
+                    .replace("query.is_swimming", "0")
+                    .replace("query.is_riding", "0")
+                    .replace("query.is_sleeping", "0")
+                    .replace("query.is_alive", "0")
+                    .replace("query.is_jumping", "0")
+                    .replace("query.is_gliding", "0")
+                    .replace("query.limb_swing", "0")
+                    .replace("query.limb_swing_amount", "0")
+                    .replace("query.modified_move_speed", "0")
+                    .replace("query.walk_anim_speed", "0")
+                    .replace("query.modified_distance_moved", "0")
+                    .replace("query.ground_speed", "0")
+                    .replace("query.vertical_speed", "0")
+                    .replace("query.speed", "0")
+                    .replace("query.walk_distance", "0")
+                    .replace("query.hurt_time", "0")
+                    .replace("query.hurt_direction", "0")
+                    .replace("query.death_time", "0")
+                    .replace("query.swing_progress", "0")
+                    .replace("query.is_using_item", "0")
+                    .replace("query.use_item_interval", "0")
+                    .replace("query.is_first_person", "0")
+                    .replace("query.main_hand_item_use_duration", "0")
+                    .replace("query.yaw_speed", "0")
+                    .replace("query.position_delta_x", "0")
+                    .replace("query.position_delta_y", "0")
+                    .replace("query.position_delta_z", "0");
+        }
+
+        private static int findTopLevelComma(String expr) {
+            int depth = 0;
+            for (int i = 0; i < expr.length(); i++) {
+                char c = expr.charAt(i);
+                if (c == '(') depth++;
+                else if (c == ')') depth--;
+                else if (c == ',' && depth == 0) return i;
+            }
+            return -1;
         }
 
         public void loadAnimations(File animFile) {

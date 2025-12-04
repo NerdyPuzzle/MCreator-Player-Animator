@@ -149,14 +149,14 @@ public abstract class PlayerAnimationMixin<T extends LivingEntity> {
 			if (modelPart == null)
 				continue;
 			// Apply rotation
-			Vec3 rotation = ${JavaModName}PlayerAnimationAPI.PlayerBone.interpolate(bone.rotations, animationProgress);
+			Vec3 rotation = ${JavaModName}PlayerAnimationAPI.PlayerBone.interpolate(bone.rotations, animationProgress, player);
 			if (rotation != null) {
 				modelPart.xRot = (float) Math.toRadians(rotation.x);
 				modelPart.yRot = (float) Math.toRadians(rotation.y);
 				modelPart.zRot = (float) Math.toRadians(rotation.z);
 			}
 			// Apply position (don't apply if null - keep default position)
-			Vec3 position = ${JavaModName}PlayerAnimationAPI.PlayerBone.interpolate(bone.positions, animationProgress);
+			Vec3 position = ${JavaModName}PlayerAnimationAPI.PlayerBone.interpolate(bone.positions, animationProgress, player);
 			if (position != null) {
 				// Position offsets are relative, not absolute
 				modelPart.x += (float) position.x;
@@ -164,7 +164,7 @@ public abstract class PlayerAnimationMixin<T extends LivingEntity> {
 				modelPart.z += (float) position.z;
 			}
 			// Apply scale
-			Vec3 scale = ${JavaModName}PlayerAnimationAPI.PlayerBone.interpolate(bone.scales, animationProgress);
+			Vec3 scale = ${JavaModName}PlayerAnimationAPI.PlayerBone.interpolate(bone.scales, animationProgress, player);
 			if (scale != null) {
 				modelPart.xScale = (float) scale.x;
 				modelPart.yScale = (float) scale.y;

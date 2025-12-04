@@ -30,16 +30,16 @@ public abstract class PlayerAnimationRendererMixin extends LivingEntityRenderer<
             return;
 		boolean firstPerson = player.getPersistentData().getBooleanOr("FirstPersonAnimation", false) && mc.options.getCameraType().isFirstPerson() && player == mc.player && mc.screen == null;
         float animationProgress = player.getPersistentData().getFloatOr("PlayerAnimationProgress", 0);
-		Vec3 scale = ${JavaModName}PlayerAnimationAPI.PlayerBone.interpolate(bone.scales, animationProgress);
+		Vec3 scale = ${JavaModName}PlayerAnimationAPI.PlayerBone.interpolate(bone.scales, animationProgress, player);
 		if (scale != null) {
 			poseStack.scale((float) scale.x, (float) scale.y, (float) scale.z);
 		}
-		Vec3 position = ${JavaModName}PlayerAnimationAPI.PlayerBone.interpolate(bone.positions, animationProgress);
+		Vec3 position = ${JavaModName}PlayerAnimationAPI.PlayerBone.interpolate(bone.positions, animationProgress, player);
 		if (position != null) {
 		    if (!firstPerson)
 			    poseStack.translate((float) -position.x * 0.0625f, (float) (position.y * 0.0625f) + 0.75f, (float) position.z * 0.0625f);
 		}
-		Vec3 rotation = ${JavaModName}PlayerAnimationAPI.PlayerBone.interpolate(bone.rotations, animationProgress);
+		Vec3 rotation = ${JavaModName}PlayerAnimationAPI.PlayerBone.interpolate(bone.rotations, animationProgress, player);
 		if (rotation != null) {
 		    if (!firstPerson)
 			    poseStack.mulPose(Axis.ZP.rotationDegrees((float) rotation.z));

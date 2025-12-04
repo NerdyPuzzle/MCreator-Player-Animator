@@ -26,15 +26,15 @@ public abstract class ItemInHandLayerMixin {
 			if (bone == null)
 				return;
 			float animationProgress = player.getPersistentData().getFloatOr("PlayerAnimationProgress", 0);
-			Vec3 scale = ${JavaModName}PlayerAnimationAPI.PlayerBone.interpolate(bone.scales, animationProgress);
+			Vec3 scale = ${JavaModName}PlayerAnimationAPI.PlayerBone.interpolate(bone.scales, animationProgress, player);
 			if (scale != null) {
 				poseStack.scale((float) scale.x, (float) scale.y, (float) scale.z);
 			}
-			Vec3 position = ${JavaModName}PlayerAnimationAPI.PlayerBone.interpolate(bone.positions, animationProgress);
+			Vec3 position = ${JavaModName}PlayerAnimationAPI.PlayerBone.interpolate(bone.positions, animationProgress, player);
 			if (position != null) {
 				poseStack.translate((float) -position.x * 0.0625f, (float) -position.z * 0.0625f, (float) position.y * 0.0625f);
 			}
-			Vec3 rotation = ${JavaModName}PlayerAnimationAPI.PlayerBone.interpolate(bone.rotations, animationProgress);
+			Vec3 rotation = ${JavaModName}PlayerAnimationAPI.PlayerBone.interpolate(bone.rotations, animationProgress, player);
 			if (rotation != null) {
 				poseStack.mulPose(Axis.ZP.rotationDegrees((float) rotation.y));
 				poseStack.mulPose(Axis.YP.rotationDegrees((float) -rotation.z));

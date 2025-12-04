@@ -186,11 +186,11 @@ public class ${JavaModName}PlayerAnimationAPI {
 			return new KeyframeValue(Vec3.ZERO);
 		}
 
-		public static Vec3 interpolate(List<Keyframe> keyframes, float time) {
+		public static Vec3 interpolate(List<Keyframe> keyframes, float time, Player player) {
 			if (keyframes.isEmpty()) return null;
 			if (keyframes.size() == 1) {
 				Keyframe kf = keyframes.get(0);
-				return kf.value.isMolang() ? evalMolang(kf.value.molang, time) : kf.value.vector;
+				return kf.value.isMolang() ? evalMolang(kf.value.molang, time, player) : kf.value.vector;
 			}
 
 			Keyframe lastKf = null;
@@ -210,7 +210,7 @@ public class ${JavaModName}PlayerAnimationAPI {
 			}
 
 			if (lastKf == null) return null;
-			Vec3 postVec = lastKf.post.isMolang() ? evalMolang(lastKf.post.molang, time) : lastKf.post.vector;
+			Vec3 postVec = lastKf.post.isMolang() ? evalMolang(lastKf.post.molang, time, player) : lastKf.post.vector;
 			if (nextKf == null) return postVec;
 
 			float t1 = lastKf.time;
@@ -219,17 +219,17 @@ public class ${JavaModName}PlayerAnimationAPI {
 
 			float alpha = (time - t1) / (t2_ - t1);
 			Vec3 v1 = postVec;
-			Vec3 v2 = nextKf.pre.isMolang() ? evalMolang(nextKf.pre.molang, time) : nextKf.pre.vector;
+			Vec3 v2 = nextKf.pre.isMolang() ? evalMolang(nextKf.pre.molang, time, player) : nextKf.pre.vector;
 
 			if (lastKf.catmullrom) {
 				Vec3 p0 = v1, p1 = v1, p2 = v2, p3 = v2;
 				if (lastIdx > 0) {
 					KeyframeValue kv = keyframes.get(lastIdx - 1).post;
-					p0 = kv.isMolang() ? evalMolang(kv.molang, time) : kv.vector;
+					p0 = kv.isMolang() ? evalMolang(kv.molang, time, player) : kv.vector;
 				}
 				if (lastIdx + 1 < keyframes.size() - 1) {
 					KeyframeValue kv = keyframes.get(lastIdx + 2).pre;
-					p3 = kv.isMolang() ? evalMolang(kv.molang, time) : kv.vector;
+					p3 = kv.isMolang() ? evalMolang(kv.molang, time, player) : kv.vector;
 				}
 
 				float t = alpha, t2 = t * t, t3 = t2 * t;
@@ -243,45 +243,112 @@ public class ${JavaModName}PlayerAnimationAPI {
 			return new Vec3(v1.x + (v2.x - v1.x) * alpha, v1.y + (v2.y - v1.y) * alpha, v1.z + (v2.z - v1.z) * alpha);
 		}
 
-		private static Vec3 evalMolang(String expr, float time) {
-			expr = expr.replace("query.anim_time", String.valueOf(time));
+		private static Vec3 evalMolang(String expr, float time, Player player) {
+			expr = preprocessMolangQueries(expr, time, player);
 			try {
 				if (expr.trim().startsWith("[") && expr.trim().endsWith("]")) {
 					String inner = expr.trim().substring(1, expr.trim().length() - 1);
 					String[] parts = inner.split(",");
 					return new Vec3(
-						parts.length > 0 ? evalFloat(parts[0].trim(), time) : 0,
-						parts.length > 1 ? evalFloat(parts[1].trim(), time) : 0,
-						parts.length > 2 ? evalFloat(parts[2].trim(), time) : 0
+						parts.length > 0 ? evalFloat(parts[0].trim(), time, player) : 0,
+						parts.length > 1 ? evalFloat(parts[1].trim(), time, player) : 0,
+						parts.length > 2 ? evalFloat(parts[2].trim(), time, player) : 0
 					);
 				}
-				float val = evalFloat(expr, time);
+				float val = evalFloat(expr, time, player);
 				return new Vec3(val, val, val);
 			} catch (Exception e) {
+			e.printStackTrace();
 				return Vec3.ZERO;
 			}
 		}
 
-		private static float evalFloat(String expr, float time) {
-			expr = expr.replace("query.anim_time", String.valueOf(time)).trim().replace(" ", "");
+		private static float evalFloat(String expr, float time, Player player) {
+			if (expr == null || expr.isEmpty()) return 0.0f;
+			expr = expr.trim().replace(" ", "");
 			String lower = expr.toLowerCase();
 
 			if (lower.startsWith("math.sin(") && lower.endsWith(")")) {
-				return (float) Math.sin(Math.toRadians(evalFloat(expr.substring(9, expr.length() - 1), time)));
+				return (float) Math.sin(Math.toRadians(evalFloat(expr.substring(9, expr.length() - 1), time, player)));
 			}
 			if (lower.startsWith("math.cos(") && lower.endsWith(")")) {
-				return (float) Math.cos(Math.toRadians(evalFloat(expr.substring(9, expr.length() - 1), time)));
+				return (float) Math.cos(Math.toRadians(evalFloat(expr.substring(9, expr.length() - 1), time, player)));
+			}
+			if (lower.startsWith("math.tan(") && lower.endsWith(")")) {
+				return (float) Math.tan(Math.toRadians(evalFloat(expr.substring(9, expr.length() - 1), time, player)));
+			}
+			if (lower.startsWith("math.abs(") && lower.endsWith(")")) {
+				return Math.abs(evalFloat(expr.substring(9, expr.length() - 1), time, player));
+			}
+			if (lower.startsWith("math.sqrt(") && lower.endsWith(")")) {
+				return (float) Math.sqrt(evalFloat(expr.substring(10, expr.length() - 1), time, player));
+			}
+			if (lower.startsWith("math.pow(") && lower.endsWith(")")) {
+				String inner = expr.substring(9, expr.length() - 1);
+				int commaPos = findTopLevelComma(inner);
+				if (commaPos != -1) {
+					float base = evalFloat(inner.substring(0, commaPos), time, player);
+					float exp = evalFloat(inner.substring(commaPos + 1), time, player);
+					return (float) Math.pow(base, exp);
+				}
+			}
+			if (lower.startsWith("math.min(") && lower.endsWith(")")) {
+				String inner = expr.substring(9, expr.length() - 1);
+				int commaPos = findTopLevelComma(inner);
+				if (commaPos != -1) {
+					return Math.min(evalFloat(inner.substring(0, commaPos), time, player),
+								  evalFloat(inner.substring(commaPos + 1), time, player));
+				}
+			}
+			if (lower.startsWith("math.max(") && lower.endsWith(")")) {
+				String inner = expr.substring(9, expr.length() - 1);
+				int commaPos = findTopLevelComma(inner);
+				if (commaPos != -1) {
+					return Math.max(evalFloat(inner.substring(0, commaPos), time, player),
+								  evalFloat(inner.substring(commaPos + 1), time, player));
+				}
+			}
+			if (lower.startsWith("math.clamp(") && lower.endsWith(")")) {
+				String inner = expr.substring(11, expr.length() - 1);
+				List<String> parts = new ArrayList<>();
+				int depth = 0;
+				int start = 0;
+				for (int i = 0; i < inner.length(); i++) {
+					char c = inner.charAt(i);
+					if (c == '(') depth++;
+					else if (c == ')') depth--;
+					else if (c == ',' && depth == 0) {
+						parts.add(inner.substring(start, i));
+						start = i + 1;
+					}
+				}
+				parts.add(inner.substring(start));
+
+				if (parts.size() == 3) {
+					float val = evalFloat(parts.get(0), time, player);
+					float min = evalFloat(parts.get(1), time, player);
+					float max = evalFloat(parts.get(2), time, player);
+					return Math.max(min, Math.min(max, val));
+				}
 			}
 
 			int depth = 0;
+
 			for (int i = expr.length() - 1; i >= 0; i--) {
 				char c = expr.charAt(i);
-				if (c == ')') depth++;
-				else if (c == '(') depth--;
-				else if (depth == 0) {
-					if (c == '+' || (c == '-' && i > 0)) {
-						return c == '+' ? evalFloat(expr.substring(0, i), time) + evalFloat(expr.substring(i + 1), time)
-										: evalFloat(expr.substring(0, i), time) - evalFloat(expr.substring(i + 1), time);
+					if (c == ')') depth++;
+					else if (c == '(') depth--;
+					else if (depth == 0) {
+					if (c == '+') {
+						return evalFloat(expr.substring(0, i), time, player) + evalFloat(expr.substring(i + 1), time, player);
+					}
+					else if (c == '-' && i > 0) {
+						char prev = expr.charAt(i - 1);
+						boolean isOperator = prev != '+' && prev != '-' && prev != '*' && prev != '/' && prev != '(' && prev != 'E' && prev != 'e';
+
+						if (isOperator) {
+							return evalFloat(expr.substring(0, i), time, player) - evalFloat(expr.substring(i + 1), time, player);
+						}
 					}
 				}
 			}
@@ -291,14 +358,82 @@ public class ${JavaModName}PlayerAnimationAPI {
 				char c = expr.charAt(i);
 				if (c == ')') depth++;
 				else if (c == '(') depth--;
-				else if (depth == 0 && (c == '*' || c == '/')) {
-					return c == '*' ? evalFloat(expr.substring(0, i), time) * evalFloat(expr.substring(i + 1), time)
-									: evalFloat(expr.substring(0, i), time) / evalFloat(expr.substring(i + 1), time);
+				else if (depth == 0) {
+					if (c == '*') {
+						return evalFloat(expr.substring(0, i), time, player) * evalFloat(expr.substring(i + 1), time, player);
+					}
+					if (c == '/') {
+						float denominator = evalFloat(expr.substring(i + 1), time, player);
+						return denominator == 0 ? 0 : evalFloat(expr.substring(0, i), time, player) / denominator;
+					}
 				}
 			}
 
-			if (expr.startsWith("-")) return -evalFloat(expr.substring(1), time);
-			return Float.parseFloat(expr);
+			if (expr.startsWith("-")) {
+				return -evalFloat(expr.substring(1), time, player);
+			}
+
+			try {
+				return Float.parseFloat(expr);
+			} catch (NumberFormatException e) {
+				return 0.0f;
+			}
+		}
+
+		private static String preprocessMolangQueries(String expr, float time, Player player) {
+			java.util.function.Function<Float, String> fmt = (val) -> String.format(java.util.Locale.ROOT, "%.6f", val);
+			Minecraft mc = Minecraft.getInstance();
+
+			return expr
+			 .replace("query.anim_time", fmt.apply(time))
+			 .replace("query.head_x_rotation", fmt.apply(Mth.wrapDegrees(player.getXRot())))
+			 .replace("query.head_y_rotation", fmt.apply(Mth.wrapDegrees(player.getYRot())))
+             .replace("query.body_x_rotation", fmt.apply(Mth.wrapDegrees(Mth.lerp(mc.getTimer().getGameTimeDeltaPartialTick(false), player.xRotO, player.getXRot()))))
+             .replace("query.body_y_rotation", fmt.apply(Mth.wrapDegrees(Mth.rotLerp(mc.getTimer().getGameTimeDeltaPartialTick(false), player.yBodyRotO, player.yBodyRot))))
+			 .replace("query.life_time", fmt.apply(player.tickCount / 20.0f))
+			 .replace("query.health", fmt.apply(player.getHealth()))
+			 .replace("query.max_health", fmt.apply(player.getMaxHealth()))
+			 .replace("query.is_on_ground", player.onGround() ? "1.0" : "0.0")
+			 .replace("query.is_in_water", player.isInWater() ? "1.0" : "0.0")
+			 .replace("query.is_sneaking", player.isCrouching() ? "1.0" : "0.0")
+			 .replace("query.is_sprinting", player.isSprinting() ? "1.0" : "0.0")
+			 .replace("query.is_swimming", player.isSwimming() ? "1.0" : "0.0")
+			 .replace("query.is_riding", player.isPassenger() ? "1.0" : "0.0")
+			 .replace("query.is_sleeping", player.isSleeping() ? "1.0" : "0.0")
+			 .replace("query.is_alive", player.isAlive() ? "1.0" : "0.0")
+			 .replace("query.is_gliding", player.isFallFlying() ? "1.0" : "0.0")
+			 .replace("query.ground_speed", fmt.apply((float)Math.sqrt(player.getDeltaMovement().x * player.getDeltaMovement().x +
+														 player.getDeltaMovement().z * player.getDeltaMovement().z)))
+			 .replace("query.vertical_speed", fmt.apply((float)player.getDeltaMovement().y))
+			 .replace("query.speed", fmt.apply((float)player.getDeltaMovement().length()))
+			 .replace("query.limb_swing", fmt.apply(player.walkAnimation.position()))
+			 .replace("query.limb_swing_amount", fmt.apply(player.walkAnimation.speed()))
+			 .replace("query.modified_move_speed", fmt.apply(player.walkAnimation.speed()))
+			 .replace("query.walk_anim_speed", fmt.apply(player.walkAnimation.speed()))
+			 .replace("query.modified_distance_moved", fmt.apply(player.walkAnimation.position()))
+			 .replace("query.hurt_time", fmt.apply((float)player.hurtTime))
+			 .replace("query.death_time", fmt.apply((float)player.deathTime))
+			 .replace("query.swing_progress", fmt.apply(player.getAttackAnim(1.0f)))
+			 .replace("query.is_using_item", player.isUsingItem() ? "1.0" : "0.0")
+			 .replace("query.use_item_interval", fmt.apply((float)player.getUseItemRemainingTicks()))
+			 .replace("query.is_first_person", mc.options.getCameraType().isFirstPerson() ? "1.0" : "0.0")
+			 .replace("query.main_hand_item_use_duration", player.isUsingItem() && player.getUsedItemHand() == InteractionHand.MAIN_HAND
+												? fmt.apply((float)player.getUseItemRemainingTicks()) : "0.0")
+			 .replace("query.yaw_speed", fmt.apply(Math.abs(Mth.wrapDegrees(player.getYRot() - player.yRotO))))
+			 .replace("query.position_delta_x", fmt.apply((float)player.getDeltaMovement().x))
+			 .replace("query.position_delta_y", fmt.apply((float)player.getDeltaMovement().y))
+			 .replace("query.position_delta_z", fmt.apply((float)player.getDeltaMovement().z));
+	    }
+
+		private static int findTopLevelComma(String expr) {
+			int depth = 0;
+			for (int i = 0; i < expr.length(); i++) {
+				char c = expr.charAt(i);
+				if (c == '(') depth++;
+				else if (c == ')') depth--;
+				else if (c == ',' && depth == 0) return i;
+			}
+			return -1;
 		}
 	}
 
