@@ -53,10 +53,13 @@ public abstract class HumanoidArmorLayerMixin<S extends HumanoidRenderState, M e
 	}
 
 	private void hideArmorParts(HumanoidModel armorModel, boolean hide) {
+		M playerModel = (M) ((HumanoidArmorLayer) (Object) this).getParentModel();
 		armorModel.head.skipDraw = hide;
 		armorModel.body.skipDraw = hide;
 		armorModel.leftLeg.skipDraw = hide;
 		armorModel.rightLeg.skipDraw = hide;
 		armorModel.hat.skipDraw = hide;
+		armorModel.rightArm.skipDraw = playerModel.rightArm.skipDraw;
+		armorModel.leftArm.skipDraw = playerModel.leftArm.skipDraw;
 	}
 }

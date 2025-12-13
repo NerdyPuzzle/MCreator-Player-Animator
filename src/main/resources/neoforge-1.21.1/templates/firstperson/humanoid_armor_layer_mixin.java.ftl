@@ -48,10 +48,13 @@ public abstract class HumanoidArmorLayerMixin<T extends LivingEntity, M extends 
 	}
 
 	private void hideArmorParts(HumanoidModel armorModel) {
+		M playerModel = (M) ((HumanoidArmorLayer) (Object) this).getParentModel();
 		armorModel.head.visible = false;
 		armorModel.body.visible = false;
 		armorModel.leftLeg.visible = false;
 		armorModel.rightLeg.visible = false;
 		armorModel.hat.visible = false;
+		armorModel.rightArm.visible = playerModel.rightArm.visible;
+		armorModel.leftArm.visible = playerModel.leftArm.visible;
 	}
 }
