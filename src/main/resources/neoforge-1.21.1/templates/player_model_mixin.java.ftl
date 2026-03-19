@@ -54,10 +54,6 @@ public abstract class PlayerAnimationMixin<T extends LivingEntity> {
 		if (playingAnimation.isEmpty()) {
 			return;
 		}
-		if (firstPerson) {
-			player.yBodyRotO = player.yHeadRotO;
-			player.yBodyRot = player.yHeadRot;
-		}
 		if (overrideAnimation) {
 			data.putBoolean("OverrideCurrentAnimation", false);
 			data.remove("PlayerAnimationProgress");

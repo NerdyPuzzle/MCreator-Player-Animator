@@ -51,11 +51,8 @@ public abstract class PlayerAnimationMixin {
 		if (playingAnimation.isEmpty()) {
 			return;
 		}
-		if (firstPerson) {
+		if (firstPerson)
 			hideModelParts(model, true);
-			player.yBodyRotO = player.yHeadRotO;
-			player.yBodyRot = player.yHeadRot;
-		}
 		if (overrideAnimation) {
 			firstPerson = data.getBooleanOr("FirstPersonAnimation", false) && mc.options.getCameraType().isFirstPerson() && player == mc.player && mc.screen == null;
 			${JavaModName}PlayerAnimationAPI.active_animations.put(player, null);

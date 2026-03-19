@@ -54,6 +54,7 @@ public abstract class PlayerAnimationRendererMixin extends LivingEntityRenderer<
 		    }
 		}
 	    if (firstPerson && scale_ != 0) {
+	        poseStack.mulPose(Axis.YP.rotationDegrees(bodyRot - player.getYRot()));
 	        poseStack.translate(0, 1.5f, 0);
 	        poseStack.mulPose(Axis.XP.rotationDegrees(-player.getXRot()));
 	        poseStack.translate(0, -1.5f, 0);
