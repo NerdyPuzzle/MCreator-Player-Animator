@@ -20,7 +20,7 @@ public abstract class PlayerAnimationRendererMixin extends LivingEntityRenderer<
 		if (!master.equals("${modid}")) {
 			return;
 	    }
-		if (entity.getPersistentData().getBoolean("FirstPersonAnimation") && mc.options.getCameraType().isFirstPerson() && entity == mc.player && mc.screen == null) {
+		if (entity.getPersistentData().getBoolean("FirstPersonAnimation") && mc.options.getCameraType().isFirstPerson() && entity == mc.player && (mc.screen == null || mc.screen instanceof ChatScreen)) {
 			this.model.head.visible = false;
 			this.model.body.visible = false;
 			this.model.leftLeg.visible = false;
@@ -49,7 +49,7 @@ public abstract class PlayerAnimationRendererMixin extends LivingEntityRenderer<
 	    if (animation == null)
 	        return;
 	    ${JavaModName}PlayerAnimationAPI.PlayerBone bone = animation.bones.get("body");
-	    boolean firstPerson = player.getPersistentData().getBoolean("FirstPersonAnimation") && mc.options.getCameraType().isFirstPerson() && player == mc.player && mc.screen == null;
+	    boolean firstPerson = player.getPersistentData().getBoolean("FirstPersonAnimation") && mc.options.getCameraType().isFirstPerson() && player == mc.player && (mc.screen == null || mc.screen instanceof ChatScreen);
         if (bone == null && !firstPerson)
             return;
         if (bone != null) {

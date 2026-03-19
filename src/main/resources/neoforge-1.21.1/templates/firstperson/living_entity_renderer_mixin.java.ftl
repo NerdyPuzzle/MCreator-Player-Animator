@@ -21,7 +21,7 @@ public abstract class LivingEntityRendererMixin {
 			return layers;
 	    }
         if (entity instanceof Player player && mc.options.getCameraType().isFirstPerson()) {
-			if (mc.player == player && mc.screen == null) {
+			if (mc.player == player && (mc.screen == null || mc.screen instanceof ChatScreen)) {
 				CompoundTag playerData = player.getPersistentData();
 				if (playerData.getBoolean("FirstPersonAnimation")) {
 					playerData.putInt("setNullRender", 4);

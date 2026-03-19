@@ -16,7 +16,7 @@ public abstract class ItemInHandRendererMixin {
 		}
 		if (!master.equals("${modid}"))
 			return;
-		if (localPlayer instanceof Player player && mc.player == player && mc.screen == null) {
+		if (localPlayer instanceof Player player && mc.player == player && (mc.screen == null || mc.screen instanceof ChatScreen)) {
 		    if (dispatcher == null)
 		        dispatcher = mc.getEntityRenderDispatcher();
 			CompoundTag playerData = player.getPersistentData();

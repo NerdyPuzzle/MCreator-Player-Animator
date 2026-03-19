@@ -44,7 +44,7 @@ public abstract class PlayerAnimationMixin<T extends LivingEntity> {
 		CompoundTag data = player.getPersistentData();
 		String playingAnimation = data.getString("PlayerCurrentAnimation");
 		boolean overrideAnimation = data.getBoolean("OverrideCurrentAnimation");
-		boolean firstPerson = data.getBoolean("FirstPersonAnimation") && mc.options.getCameraType().isFirstPerson() && player == mc.player && mc.screen == null;
+		boolean firstPerson = data.getBoolean("FirstPersonAnimation") && mc.options.getCameraType().isFirstPerson() && player == mc.player && (mc.screen == null || mc.screen instanceof ChatScreen);
 		if (data.getBoolean("ResetPlayerAnimation")) {
 			data.remove("ResetPlayerAnimation");
 			data.remove("LastAnimationProgress");
@@ -59,7 +59,7 @@ public abstract class PlayerAnimationMixin<T extends LivingEntity> {
 			data.remove("PlayerAnimationProgress");
 			data.remove("LastAnimationProgress");
 			data.remove("PlayedSoundTimes");
-			firstPerson = data.getBoolean("FirstPersonAnimation") && mc.options.getCameraType().isFirstPerson() && player == mc.player && mc.screen == null;
+			firstPerson = data.getBoolean("FirstPersonAnimation") && mc.options.getCameraType().isFirstPerson() && player == mc.player && (mc.screen == null || mc.screen instanceof ChatScreen);
 			${JavaModName}PlayerAnimationAPI.active_animations.put(player, null);
 		}
 		${JavaModName}PlayerAnimationAPI.PlayerAnimation animation = ${JavaModName}PlayerAnimationAPI.active_animations.get(player);
@@ -135,7 +135,7 @@ public abstract class PlayerAnimationMixin<T extends LivingEntity> {
 			data.put("PlayedSoundTimes", playedSoundsTag);
 			data.putFloat("LastAnimationProgress", animationProgress);
 		}
-		if (!data.getBoolean("FirstPersonAnimation") && mc.options.getCameraType().isFirstPerson() && player == mc.player && mc.screen == null)
+		if (!data.getBoolean("FirstPersonAnimation") && mc.options.getCameraType().isFirstPerson() && player == mc.player && (mc.screen == null || mc.screen instanceof ChatScreen))
 			return;
 		// Apply each bone's transformations
 		for (Map.Entry<String, ${JavaModName}PlayerAnimationAPI.PlayerBone> entry : animation.bones.entrySet()) {

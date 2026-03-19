@@ -16,7 +16,7 @@ public abstract class LevelRendererMixin {
 		if (!master.equals("${modid}")) {
 			return;
 	    }
-		if (camera.getEntity() instanceof Player player && player.getPersistentData().getBooleanOr("FirstPersonAnimation", false) && mc.player == player && mc.screen == null) {
+		if (camera.getEntity() instanceof Player player && player.getPersistentData().getBooleanOr("FirstPersonAnimation", false) && mc.player == player && (mc.screen == null || mc.screen instanceof ChatScreen)) {
 			((CameraAccessor) camera).setDetached(true);
 		}
 	}

@@ -26,7 +26,7 @@ public abstract class PlayerAnimationRendererMixin extends LivingEntityRenderer<
 	    if (animation == null)
 	        return;
 	    ${JavaModName}PlayerAnimationAPI.PlayerBone bone = animation.bones.get("body");
-	    boolean firstPerson = player.getPersistentData().getBooleanOr("FirstPersonAnimation", false) && mc.options.getCameraType().isFirstPerson() && player == mc.player && mc.screen == null;
+	    boolean firstPerson = player.getPersistentData().getBooleanOr("FirstPersonAnimation", false) && mc.options.getCameraType().isFirstPerson() && player == mc.player && (mc.screen == null || mc.screen instanceof ChatScreen);
         if (bone == null && !firstPerson)
             return;
         if (bone != null) {

@@ -40,7 +40,7 @@ public abstract class PlayerAnimationMixin {
 		CompoundTag data = player.getPersistentData();
 		String playingAnimation = data.getStringOr("PlayerCurrentAnimation", "");
 		boolean overrideAnimation = data.getBooleanOr("OverrideCurrentAnimation", false);
-		boolean firstPerson = data.getBooleanOr("FirstPersonAnimation", false) && mc.options.getCameraType().isFirstPerson() && player == mc.player && mc.screen == null;
+		boolean firstPerson = data.getBooleanOr("FirstPersonAnimation", false) && mc.options.getCameraType().isFirstPerson() && player == mc.player && (mc.screen == null || mc.screen instanceof ChatScreen);
 		if (data.getBooleanOr("ResetPlayerAnimation", false)) {
 			data.remove("ResetPlayerAnimation");
 			data.remove("LastTickTime");
@@ -54,7 +54,7 @@ public abstract class PlayerAnimationMixin {
 		if (firstPerson)
 			hideModelParts(model, true);
 		if (overrideAnimation) {
-			firstPerson = data.getBooleanOr("FirstPersonAnimation", false) && mc.options.getCameraType().isFirstPerson() && player == mc.player && mc.screen == null;
+			firstPerson = data.getBooleanOr("FirstPersonAnimation", false) && mc.options.getCameraType().isFirstPerson() && player == mc.player && (mc.screen == null || mc.screen instanceof ChatScreen);
 			${JavaModName}PlayerAnimationAPI.active_animations.put(player, null);
 			data.remove("PlayerAnimationProgress");
 			data.remove("LastAnimationProgress");
@@ -133,7 +133,7 @@ public abstract class PlayerAnimationMixin {
 			data.put("PlayedSoundTimes", playedSoundsTag);
 			data.putFloat("LastAnimationProgress", animationProgress);
 		}
-		if (!data.getBooleanOr("FirstPersonAnimation", false) && mc.options.getCameraType().isFirstPerson() && player == mc.player && mc.screen == null)
+		if (!data.getBooleanOr("FirstPersonAnimation", false) && mc.options.getCameraType().isFirstPerson() && player == mc.player && (mc.screen == null || mc.screen instanceof ChatScreen))
 			return;
 		// Apply each bone's transformations
 		for (Map.Entry<String, ${JavaModName}PlayerAnimationAPI.PlayerBone> entry : animation.bones.entrySet()) {
