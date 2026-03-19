@@ -49,30 +49,37 @@ public abstract class PlayerAnimationRendererMixin extends LivingEntityRenderer<
 	    if (animation == null)
 	        return;
 	    ${JavaModName}PlayerAnimationAPI.PlayerBone bone = animation.bones.get("body");
-        if (bone == null)
+	    boolean firstPerson = player.getPersistentData().getBoolean("FirstPersonAnimation") && mc.options.getCameraType().isFirstPerson() && player == mc.player && mc.screen == null;
+        if (bone == null && !firstPerson)
             return;
-        boolean firstPerson = player.getPersistentData().getBoolean("FirstPersonAnimation") && mc.options.getCameraType().isFirstPerson() && player == mc.player && mc.screen == null;
-        float animationProgress = player.getPersistentData().getFloat("PlayerAnimationProgress");
-		Vec3 scale = ${JavaModName}PlayerAnimationAPI.PlayerBone.interpolate(bone.scales, animationProgress, player);
-		if (scale != null) {
-			poseStack.scale((float) scale.x, (float) scale.y, (float) scale.z);
-		}
-		Vec3 position = ${JavaModName}PlayerAnimationAPI.PlayerBone.interpolate(bone.positions, animationProgress, player);
-		if (position != null) {
-			if (!firstPerson)
-			    poseStack.translate((float) -position.x * 0.0625f, (float) (position.y * 0.0625f) + 0.75f, (float) position.z * 0.0625f);
-		}
-		Vec3 rotation = ${JavaModName}PlayerAnimationAPI.PlayerBone.interpolate(bone.rotations, animationProgress, player);
-		if (rotation != null) {
-			if (!firstPerson)
-			    poseStack.mulPose(Axis.ZP.rotationDegrees((float) rotation.z));
-			poseStack.mulPose(Axis.YP.rotationDegrees((float) -rotation.y));
-			if (!firstPerson)
-			    poseStack.mulPose(Axis.XP.rotationDegrees((float) -rotation.x));
-		}
-		if (position != null) {
-		    if (!firstPerson)
-		        poseStack.translate(0, -0.75f, 0);
-		}
+        if (bone != null) {
+            float animationProgress = player.getPersistentData().getFloat("PlayerAnimationProgress");
+		    Vec3 scale = ${JavaModName}PlayerAnimationAPI.PlayerBone.interpolate(bone.scales, animationProgress, player);
+		    if (scale != null) {
+			    poseStack.scale((float) scale.x, (float) scale.y, (float) scale.z);
+		    }
+		    Vec3 position = ${JavaModName}PlayerAnimationAPI.PlayerBone.interpolate(bone.positions, animationProgress, player);
+		    if (position != null) {
+			    if (!firstPerson)
+			        poseStack.translate((float) -position.x * 0.0625f, (float) (position.y * 0.0625f) + 0.75f, (float) position.z * 0.0625f);
+		    }
+		    Vec3 rotation = ${JavaModName}PlayerAnimationAPI.PlayerBone.interpolate(bone.rotations, animationProgress, player);
+		    if (rotation != null) {
+			    if (!firstPerson)
+			        poseStack.mulPose(Axis.ZP.rotationDegrees((float) rotation.z));
+			    poseStack.mulPose(Axis.YP.rotationDegrees((float) -rotation.y));
+			    if (!firstPerson)
+			        poseStack.mulPose(Axis.XP.rotationDegrees((float) -rotation.x));
+		    }
+		    if (position != null) {
+		        if (!firstPerson)
+		            poseStack.translate(0, -0.75f, 0);
+		    }
+	    }
+	    if (firstPerson && g != 0) {
+	        poseStack.translate(0, 1.5f, 0);
+	        poseStack.mulPose(Axis.XP.rotationDegrees(-player.getXRot()));
+	        poseStack.translate(0, -1.5f, 0);
+	    }
 	}
 }

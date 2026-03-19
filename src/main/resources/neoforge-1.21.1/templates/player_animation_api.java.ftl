@@ -258,7 +258,7 @@ public class ${JavaModName}PlayerAnimationAPI {
 				float val = evalFloat(expr, time, player);
 				return new Vec3(val, val, val);
 			} catch (Exception e) {
-			e.printStackTrace();
+			    e.printStackTrace();
 				return Vec3.ZERO;
 			}
 		}
