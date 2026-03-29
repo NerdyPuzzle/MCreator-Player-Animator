@@ -2,7 +2,7 @@ package net.nerdypuzzle.playeranimator;
 
 import net.mcreator.plugin.JavaPlugin;
 import net.mcreator.plugin.Plugin;
-import net.mcreator.plugin.events.ui.BlocklyPanelRegisterJSObjects;
+import net.mcreator.plugin.events.ui.BlocklyPanelRegisterDOMData;
 import net.mcreator.plugin.events.workspace.MCreatorLoadedEvent;
 import net.mcreator.ui.MCreator;
 import net.mcreator.ui.init.L10N;
@@ -26,9 +26,9 @@ public class Launcher extends JavaPlugin {
 	public Launcher(Plugin plugin) {
 		super(plugin);
 
-        addListener(BlocklyPanelRegisterJSObjects.class, event -> {
+        addListener(BlocklyPanelRegisterDOMData.class, event -> {
             pluginJavascriptBridge = new PluginJavascriptBridge(event.getBlocklyPanel().getMCreator());
-            event.getDOMWindow().put("animbridge", pluginJavascriptBridge);
+            event.addJavaScriptBridge("animbridge", pluginJavascriptBridge);
         });
         addListener(MCreatorLoadedEvent.class, event -> {
             SwingUtilities.invokeLater(() -> {

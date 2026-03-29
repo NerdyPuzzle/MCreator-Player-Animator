@@ -1,30 +1,11 @@
 package net.nerdypuzzle.playeranimator.parts;
 
 import com.google.gson.*;
-import javafx.animation.AnimationTimer;
-import javafx.application.Platform;
-import javafx.embed.swing.JFXPanel;
-import javafx.embed.swing.SwingFXUtils;
-import javafx.scene.Group;
-import javafx.scene.control.ListCell;
-import javafx.scene.image.Image;
-import javafx.scene.image.PixelReader;
-import javafx.scene.image.PixelWriter;
-import javafx.scene.image.WritableImage;
-import javafx.scene.shape.MeshView;
-import javafx.scene.shape.TriangleMesh;
-import javafx.scene.PerspectiveCamera;
-import javafx.scene.Scene;
-import javafx.scene.SceneAntialiasing;
-import javafx.scene.paint.Color;
-import javafx.scene.paint.PhongMaterial;
-import javafx.scene.transform.Rotate;
-import javafx.scene.transform.Scale;
-import javafx.scene.transform.Translate;
 import net.mcreator.generator.GeneratorUtils;
 import net.mcreator.io.FileIO;
 import net.mcreator.io.Transliteration;
 import net.mcreator.ui.MCreator;
+import net.mcreator.ui.chromium.WebView;
 import net.mcreator.ui.component.util.PanelUtils;
 import net.mcreator.ui.dialogs.file.FileDialogs;
 import net.mcreator.ui.init.L10N;
@@ -33,9 +14,9 @@ import net.mcreator.ui.laf.themes.Theme;
 import net.mcreator.ui.workspace.WorkspacePanel;
 import net.mcreator.ui.workspace.resources.AbstractResourcePanel;
 import net.mcreator.ui.workspace.resources.ResourceFilterModel;
-import net.mcreator.util.StringUtils;
 import net.nerdypuzzle.playeranimator.Launcher;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.border.AbstractBorder;
 import javax.swing.border.Border;
@@ -44,15 +25,227 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileReader;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class WorkspacePanelPlayerAnimations extends AbstractResourcePanel<String> {
     private AnimationManager animationManager;
-    private JFXPanel previewPanel;
+    private WebView previewPanel;
     private AnimationControlPanel controlPanel;
+
+    private static String getPreviewTemplate(String skinBase64) {
+        return "<!DOCTYPE html>" +
+                "<html><head><style>" +
+                "html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background-color: #2b2b2b; }" +
+                "body { user-select: none; -webkit-user-select: none; font-family: sans-serif; }" +
+                "* { -webkit-user-drag: none; }" +
+
+                // Scene Container
+                "#scene { width: 100%; height: 100%; perspective: 1000px; display: flex; justify-content: center; align-items: center; margin-top: -100px; cursor: grab; }" +
+                "#scene:active { cursor: grabbing; }" +
+
+                "#camera { transform-style: preserve-3d; transform: translateZ(-100px); }" +
+                "#pivot { transform-style: preserve-3d; }" +
+                "#root_group { transform-style: preserve-3d; }" +
+
+                ":root { --s: 12px; }" +
+
+                ".group { transform-style: preserve-3d; position: absolute; top:0; left:0; will-change: transform; pointer-events: none; }" +
+                ".mesh { transform-style: preserve-3d; position: absolute; top:0; left:0; will-change: transform; pointer-events: none; }" +
+
+                ".face { " +
+                "  position: absolute; " +
+                "  backface-visibility: hidden; " +
+                "  -webkit-backface-visibility: hidden; " +
+                "  image-rendering: pixelated; " +
+                "  background-image: url('" + skinBase64 + "'); " +
+                "  background-size: calc(64 * var(--s)) calc(64 * var(--s)); " +
+                "  background-repeat: no-repeat; " +
+                "  background-color: #1a1a1a; " +
+                "  pointer-events: none; " +
+                "}" +
+
+                // Face Transforms
+                // Uses scale(1.01) to hide gaps.
+
+                ".f-front  { width: var(--w); height: var(--h); left: calc(var(--w) / -2); top: calc(var(--h) / -2); transform: translateZ(var(--d2)) scale(1.01); }" +
+
+                ".f-back   { width: var(--w); height: var(--h); left: calc(var(--w) / -2); top: calc(var(--h) / -2); transform: rotateY(180deg) translateZ(var(--d2)) scale3d(-1.01, 1.01, 1.01); }" +
+                ".f-right  { width: var(--d); height: var(--h); left: calc(var(--d) / -2); top: calc(var(--h) / -2); transform: rotateY(90deg)  translateZ(var(--w2)) scale3d(-1.01, 1.01, 1.01); }" +
+                ".f-left   { width: var(--d); height: var(--h); left: calc(var(--d) / -2); top: calc(var(--h) / -2); transform: rotateY(-90deg) translateZ(var(--w2)) scale3d(-1.01, 1.01, 1.01); }" +
+
+                ".f-top    { width: var(--w); height: var(--d); left: calc(var(--w) / -2); top: calc(var(--d) / -2); transform: rotateX(90deg)  translateZ(var(--h2)) scale(1.01); }" +
+                ".f-bottom { width: var(--w); height: var(--d); left: calc(var(--w) / -2); top: calc(var(--d) / -2); transform: rotateX(-90deg) translateZ(var(--h2)) scale3d(1.01, -1.01, 1.01); }" +
+
+                "</style></head>" +
+                "<body>" +
+                "<div id='scene'><div id='camera'><div id='pivot'>" +
+                "<div id='root_group'>" +
+
+                // HEAD
+                "  <div id='head_group' class='group' data-px='0' data-py='0' data-pz='0'>" +
+                "    <div class='mesh' style='transform: translate3d(0, calc(-4 * var(--s)), 0); --w:calc(8 * var(--s)); --h:calc(8 * var(--s)); --d:calc(8 * var(--s)); --w2:calc(4 * var(--s)); --h2:calc(4 * var(--s)); --d2:calc(4 * var(--s));'>" +
+                "      <div class='face f-front'  style='background-position: calc(-8 * var(--s)) calc(-8 * var(--s));'></div>" +
+                "      <div class='face f-back'   style='background-position: calc(-24 * var(--s)) calc(-8 * var(--s));'></div>" +
+                "      <div class='face f-right'  style='background-position: calc(-0 * var(--s)) calc(-8 * var(--s));'></div>" +
+                "      <div class='face f-left'   style='background-position: calc(-16 * var(--s)) calc(-8 * var(--s));'></div>" +
+                "      <div class='face f-top'    style='background-position: calc(-8 * var(--s)) calc(-0 * var(--s));'></div>" +
+                "      <div class='face f-bottom' style='background-position: calc(-16 * var(--s)) calc(-0 * var(--s));'></div>" +
+                "    </div>" +
+                "  </div>" +
+
+                // BODY (TORSO)
+                "  <div id='body_group' class='group' data-px='0' data-py='0' data-pz='0'>" +
+                "    <div class='mesh' style='transform: translate3d(0, calc(6 * var(--s)), 0); --w:calc(8 * var(--s)); --h:calc(12 * var(--s)); --d:calc(4 * var(--s)); --w2:calc(4 * var(--s)); --h2:calc(6 * var(--s)); --d2:calc(2 * var(--s));'>" +
+                "      <div class='face f-front'  style='background-position: calc(-20 * var(--s)) calc(-20 * var(--s));'></div>" +
+                "      <div class='face f-back'   style='background-position: calc(-32 * var(--s)) calc(-20 * var(--s));'></div>" +
+                "      <div class='face f-right'  style='background-position: calc(-28 * var(--s)) calc(-20 * var(--s));'></div>" + // Left UV on Right face
+                "      <div class='face f-left'   style='background-position: calc(-16 * var(--s)) calc(-20 * var(--s));'></div>" + // Right UV on Left face
+                "      <div class='face f-top'    style='background-position: calc(-20 * var(--s)) calc(-16 * var(--s));'></div>" +
+                "      <div class='face f-bottom' style='background-position: calc(-28 * var(--s)) calc(-16 * var(--s));'></div>" +
+                "    </div>" +
+                "  </div>" +
+
+                // RIGHT ARM
+                "  <div id='right_arm_group' class='group' data-px='-5' data-py='2' data-pz='0'>" +
+                "    <div class='mesh' style='transform: translate3d(calc(-1 * var(--s)), calc(4 * var(--s)), 0); --w:calc(4 * var(--s)); --h:calc(12 * var(--s)); --d:calc(4 * var(--s)); --w2:calc(2 * var(--s)); --h2:calc(6 * var(--s)); --d2:calc(2 * var(--s));'>" +
+                "      <div class='face f-front'  style='background-position: calc(-44 * var(--s)) calc(-20 * var(--s));'></div>" +
+                "      <div class='face f-back'   style='background-position: calc(-52 * var(--s)) calc(-20 * var(--s));'></div>" +
+                "      <div class='face f-right'  style='background-position: calc(-40 * var(--s)) calc(-20 * var(--s));'></div>" +
+                "      <div class='face f-left'   style='background-position: calc(-48 * var(--s)) calc(-20 * var(--s));'></div>" +
+                "      <div class='face f-top'    style='background-position: calc(-44 * var(--s)) calc(-16 * var(--s));'></div>" +
+                "      <div class='face f-bottom' style='background-position: calc(-48 * var(--s)) calc(-16 * var(--s));'></div>" +
+                "    </div>" +
+                "  </div>" +
+
+                // LEFT ARM
+                "  <div id='left_arm_group' class='group' data-px='5' data-py='2' data-pz='0'>" +
+                "    <div class='mesh' style='transform: translate3d(calc(1 * var(--s)), calc(4 * var(--s)), 0); --w:calc(4 * var(--s)); --h:calc(12 * var(--s)); --d:calc(4 * var(--s)); --w2:calc(2 * var(--s)); --h2:calc(6 * var(--s)); --d2:calc(2 * var(--s));'>" +
+                "      <div class='face f-front'  style='background-position: calc(-36 * var(--s)) calc(-52 * var(--s));'></div>" +
+                "      <div class='face f-back'   style='background-position: calc(-44 * var(--s)) calc(-52 * var(--s));'></div>" +
+                "      <div class='face f-right'  style='background-position: calc(-32 * var(--s)) calc(-52 * var(--s));'></div>" +
+                "      <div class='face f-left'   style='background-position: calc(-40 * var(--s)) calc(-52 * var(--s));'></div>" +
+                "      <div class='face f-top'    style='background-position: calc(-36 * var(--s)) calc(-48 * var(--s));'></div>" +
+                "      <div class='face f-bottom' style='background-position: calc(-40 * var(--s)) calc(-48 * var(--s));'></div>" +
+                "    </div>" +
+                "  </div>" +
+
+                // RIGHT LEG
+                "  <div id='right_leg_group' class='group' data-px='-1.9' data-py='12' data-pz='0'>" +
+                "    <div class='mesh' style='transform: translate3d(0, calc(6 * var(--s)), 0); --w:calc(4 * var(--s)); --h:calc(12 * var(--s)); --d:calc(4 * var(--s)); --w2:calc(2 * var(--s)); --h2:calc(6 * var(--s)); --d2:calc(2 * var(--s));'>" +
+                "      <div class='face f-front'  style='background-position: calc(-4 * var(--s)) calc(-20 * var(--s));'></div>" +
+                "      <div class='face f-back'   style='background-position: calc(-12 * var(--s)) calc(-20 * var(--s));'></div>" +
+                "      <div class='face f-right'  style='background-position: calc(-0 * var(--s)) calc(-20 * var(--s));'></div>" +
+                "      <div class='face f-left'   style='background-position: calc(-8 * var(--s)) calc(-20 * var(--s));'></div>" +
+                "      <div class='face f-top'    style='background-position: calc(-4 * var(--s)) calc(-16 * var(--s));'></div>" +
+                "      <div class='face f-bottom' style='background-position: calc(-8 * var(--s)) calc(-16 * var(--s));'></div>" +
+                "    </div>" +
+                "  </div>" +
+
+                // LEFT LEG
+                "  <div id='left_leg_group' class='group' data-px='1.9' data-py='12' data-pz='0'>" +
+                "    <div class='mesh' style='transform: translate3d(0, calc(6 * var(--s)), 0); --w:calc(4 * var(--s)); --h:calc(12 * var(--s)); --d:calc(4 * var(--s)); --w2:calc(2 * var(--s)); --h2:calc(6 * var(--s)); --d2:calc(2 * var(--s));'>" +
+                "      <div class='face f-front'  style='background-position: calc(-20 * var(--s)) calc(-52 * var(--s));'></div>" +
+                "      <div class='face f-back'   style='background-position: calc(-28 * var(--s)) calc(-52 * var(--s));'></div>" +
+                "      <div class='face f-right'  style='background-position: calc(-16 * var(--s)) calc(-52 * var(--s));'></div>" +
+                "      <div class='face f-left'   style='background-position: calc(-24 * var(--s)) calc(-52 * var(--s));'></div>" +
+                "      <div class='face f-top'    style='background-position: calc(-20 * var(--s)) calc(-48 * var(--s));'></div>" +
+                "      <div class='face f-bottom' style='background-position: calc(-24 * var(--s)) calc(-48 * var(--s));'></div>" +
+                "    </div>" +
+                "  </div>" +
+
+                "</div></div></div></div>" +
+                "<script>" +
+                "const parts = ['head', 'body', 'right_arm', 'left_arm', 'right_leg', 'left_leg'];" +
+                "const S = 12;" +
+                "function updateTransform(part, t, r, s) {" +
+                "  const g = document.getElementById(part + '_group');" +
+                "  if(!g) return;" +
+                "  const px = parseFloat(g.dataset.px);" +
+                "  const py = parseFloat(g.dataset.py);" +
+                "  const pz = parseFloat(g.dataset.pz);" +
+                "  let tx = (px + t.x) * S;" +
+                "  let ty = (py - t.y) * S;" +
+                "  let tz = -(pz + t.z) * S;" +
+                "  g.style.transform = `translate3d(${tx}px, ${ty}px, ${tz}px) " +
+                "                       rotateZ(${r.z}deg) rotateY(${-r.y}deg) rotateX(${-r.x}deg) " +
+                "                       scale3d(${s.x}, ${s.y}, ${s.z})`;" +
+                "}" +
+                "function updateRoot(t, r, s) {" +
+                "  const g = document.getElementById('root_group');" +
+                "  if(!g) return;" +
+                "  let tx = (t.x) * S;" +
+                "  let ty = -(t.y) * S;" +
+                "  let tz = -(t.z) * S;" +
+                "  g.style.transform = `translate3d(${tx}px, ${ty}px, ${tz}px) " +
+                "                       rotateZ(${r.z}deg) rotateY(${-r.y}deg) rotateX(${-r.x}deg) " +
+                "                       scale3d(${s.x}, ${s.y}, ${s.z})`;" +
+                "}" +
+                "function updateBones(data) {" +
+                "  if(data.root) updateRoot(data.root.position||{x:0,y:0,z:0}, data.root.rotation||{x:0,y:0,z:0}, data.root.scale||{x:1,y:1,z:1});" +
+                "  parts.forEach(p => {" +
+                "    let d = data[p] || {};" +
+                "    updateTransform(p, d.position || {x:0,y:0,z:0}, d.rotation || {x:0,y:0,z:0}, d.scale || {x:1,y:1,z:1});" +
+                "  });" +
+                "}" +
+                "function resetPose() { updateRoot({x:0,y:0,z:0},{x:0,y:0,z:0},{x:1,y:1,z:1}); parts.forEach(p => updateTransform(p, {x:0,y:0,z:0}, {x:0,y:0,z:0}, {x:1,y:1,z:1})); }" +
+                "resetPose();" +
+
+                "// Drag Logic - Attached to document to capture all events reliably\n" +
+                "var isDragging = false;\n" +
+                "var lastX = 0;\n" +
+                "var lastY = 0;\n" +
+                "var rotY = 0;\n" +
+                "var rotX = 0;\n" +
+                "var pivot = document.getElementById('pivot');\n" +
+                "\n" +
+                "document.addEventListener('mousedown', function(e) {\n" +
+                "  if(e.button !== 0) return;\n" +
+                "  isDragging = true;\n" +
+                "  lastX = e.clientX;\n" +
+                "  lastY = e.clientY;\n" +
+                "});\n" +
+                "\n" +
+                "document.addEventListener('mouseup', function(e) {\n" +
+                "  isDragging = false;\n" +
+                "});\n" +
+                "\n" +
+                "document.addEventListener('mousemove', function(e) {\n" +
+                "  // Robust check: if isDragging is true but buttons are not held (1), reset state\n" +
+                "  if (!isDragging && (e.buttons & 1) === 0) return;\n" +
+                "  if (isDragging && (e.buttons & 1) === 0) {\n" +
+                "    isDragging = false;\n" +
+                "    return;\n" +
+                "  }\n" +
+                "  // If we are here, we are dragging or mouse is held down\n" +
+                "  if (!isDragging && (e.buttons & 1) === 1) {\n" +
+                "      isDragging = true;\n" +
+                "      lastX = e.clientX;\n" +
+                "      lastY = e.clientY;\n" +
+                "  }\n" +
+                "  \n" +
+                "  var dx = e.clientX - lastX;\n" +
+                "  var dy = e.clientY - lastY;\n" +
+                "  \n" +
+                "  lastX = e.clientX;\n" +
+                "  lastY = e.clientY;\n" +
+                "  \n" +
+                "  rotY += dx * 0.5;\n" +
+                "  rotX -= dy * 0.5;\n" +
+                "  \n" +
+                "  if(rotX > 90) rotX = 90;\n" +
+                "  if(rotX < -90) rotX = -90;\n" +
+                "  \n" +
+                "  if(pivot) pivot.style.transform = 'rotateX(' + (-rotX) + 'deg) rotateY(' + rotY + 'deg)';\n" +
+                "});\n" +
+                "</script></body></html>";
+    }
 
     public WorkspacePanelPlayerAnimations(WorkspacePanel workspacePanel) {
         super(workspacePanel, new ResourceFilterModel<>(workspacePanel,
@@ -86,7 +279,7 @@ public class WorkspacePanelPlayerAnimations extends AbstractResourcePanel<String
         mainSplitPane.setBackground(Theme.current().getAltBackgroundColor());
 
         JScrollPane listScrollPane = new JScrollPane(elementList);
-        listScrollPane.setMinimumSize(new Dimension(200, 0));
+        listScrollPane.setMinimumSize(new Dimension(0, 0));
         listScrollPane.getViewport().setBackground(Theme.current().getSecondAltBackgroundColor());
 
         class ListRenderer extends JPanel implements ListCellRenderer<String> {
@@ -158,13 +351,18 @@ public class WorkspacePanelPlayerAnimations extends AbstractResourcePanel<String
         JSplitPane rightSplitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
         rightSplitPane.setResizeWeight(0.7);
 
-        previewPanel = new JFXPanel();
-        previewPanel.setPreferredSize(new Dimension(400, 400));
+        String skinBase64 = getSteveSkinBase64();
+        String html = getPreviewTemplate(skinBase64);
+        String dataUri = "data:text/html;base64," + Base64.getEncoder().encodeToString(html.getBytes(StandardCharsets.UTF_8));
+
+        previewPanel = new WebView(dataUri);
         JPanel previewContainer = new JPanel(new BorderLayout());
         previewContainer.add(previewPanel, BorderLayout.CENTER);
+        previewContainer.setMinimumSize(new Dimension(0, 0));
         rightSplitPane.setTopComponent(previewContainer);
 
         controlPanel = new AnimationControlPanel();
+        controlPanel.setMinimumSize(new Dimension(0, 0));
         rightSplitPane.setBottomComponent(controlPanel);
 
         mainSplitPane.setRightComponent(rightSplitPane);
@@ -178,6 +376,24 @@ public class WorkspacePanelPlayerAnimations extends AbstractResourcePanel<String
                 loadSelectedAnimation();
             }
         });
+    }
+
+    private String getSteveSkinBase64() {
+        try {
+            ImageIcon icon = UIRES.get("16px.steve");
+            if (icon == null) return "";
+            Image awtImage = icon.getImage();
+            BufferedImage bimg = new BufferedImage(awtImage.getWidth(null), awtImage.getHeight(null), BufferedImage.TYPE_INT_ARGB);
+            Graphics2D g = bimg.createGraphics();
+            g.drawImage(awtImage, 0, 0, null);
+            g.dispose();
+            ByteArrayOutputStream os = new ByteArrayOutputStream();
+            ImageIO.write(bimg, "png", os);
+            return "data:image/png;base64," + Base64.getEncoder().encodeToString(os.toByteArray());
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "";
+        }
     }
 
     private void loadSelectedAnimation() {
@@ -412,33 +628,43 @@ public class WorkspacePanelPlayerAnimations extends AbstractResourcePanel<String
     }
 
     static class AnimationManager {
-        private JFXPanel fxPanel;
-        private MinecraftPlayer playerModel;
-        private AnimationTimer animationTimer;
+        private WebView webView;
+        private java.util.Timer animationTimer;
         private Map<String, AnimationData> animations;
         private List<String> animationNames;
         private String currentAnimationName;
         private double animationTime = 0;
-        private Rotate modelRotation;
         private AnimationControlPanel controlPanel;
         private boolean isPlaying = false;
-        private boolean autoRotate = false;
         private double playbackSpeed = 1.0;
-        private double lastMouseX = 0;
-        private double lastMouseY = 0;
-        private double rotationY = 0;
-        private double rotationX = 0;
 
-        public AnimationManager(JFXPanel panel, AnimationControlPanel controls) {
-            this.fxPanel = panel;
+        // Executor for async JS calls to avoid blocking EDT
+        private final ExecutorService jsExecutor = Executors.newSingleThreadExecutor();
+        private final Gson gson = new Gson();
+
+        public AnimationManager(WebView webView, AnimationControlPanel controls) {
+            this.webView = webView;
             this.controlPanel = controls;
             animations = new HashMap<>();
             animationNames = new ArrayList<>();
 
-            Platform.setImplicitExit(false);
-            Platform.runLater(() -> initFX());
-
+            initWebView();
             setupControlListeners();
+        }
+
+        private void initWebView() {
+            // Using java.util.Timer to run off-EDT and avoid stack overflow with blocking executeScript
+            animationTimer = new java.util.Timer("AnimationLoop", true);
+            animationTimer.scheduleAtFixedRate(new TimerTask() {
+                @Override
+                public void run() {
+                    updateAnimation(0.016);
+                }
+            }, 0, 16);
+        }
+
+        private void executeScriptAsync(String script) {
+            jsExecutor.submit(() -> webView.executeScript(script, WebView.JSExecutionType.LOCAL_SAFE));
         }
 
         private void setupControlListeners() {
@@ -469,10 +695,8 @@ public class WorkspacePanelPlayerAnimations extends AbstractResourcePanel<String
                         if (anim != null) {
                             float newTime = (controlPanel.getTimelineSlider().getValue() / 100f) * anim.length;
                             animationTime = newTime;
-                            Platform.runLater(() -> {
-                                applyAnimation(anim, (float) animationTime);
-                                controlPanel.getTimelinePanel().setCurrentTime((float) animationTime);
-                            });
+                            applyAnimation(anim, (float) animationTime);
+                            controlPanel.getTimelinePanel().setCurrentTime((float) animationTime);
                             updateTimeLabel();
                         }
                     } else {
@@ -504,12 +728,8 @@ public class WorkspacePanelPlayerAnimations extends AbstractResourcePanel<String
         private void stop() {
             isPlaying = false;
             animationTime = 0;
-            Platform.runLater(() -> {
-                if (playerModel != null) {
-                    playerModel.resetPose();
-                }
-                controlPanel.getTimelinePanel().setCurrentTime(0);
-            });
+            executeScriptAsync("if(window.resetPose) window.resetPose();");
+            controlPanel.getTimelinePanel().setCurrentTime(0);
             controlPanel.getTimelineSlider().setValue(0);
             updateTimeLabel();
         }
@@ -538,66 +758,6 @@ public class WorkspacePanelPlayerAnimations extends AbstractResourcePanel<String
                         String.format("%.2fs / %.2fs", animationTime, anim.length)
                 );
             }
-        }
-
-        private void initFX() {
-            Group root = new Group();
-            Scene scene = new Scene(root, 400, 400, true, SceneAntialiasing.BALANCED);
-            scene.setFill(Color.TRANSPARENT);
-
-            playerModel = new MinecraftPlayer();
-            modelRotation = new Rotate(0, Rotate.Y_AXIS);
-
-            Scale baseScale = new Scale(0.7, 0.7, 0.7);
-
-            playerModel.getGroup().getTransforms().clear();
-            playerModel.getGroup().getTransforms().addAll(0, Arrays.asList(modelRotation, baseScale));
-            playerModel.addInternalTransforms();
-
-            root.getChildren().add(playerModel.getGroup());
-
-            PerspectiveCamera camera = new PerspectiveCamera(true);
-            camera.setTranslateZ(-80);
-            camera.setTranslateY(6);
-            scene.setCamera(camera);
-
-            scene.setOnMousePressed(event -> {
-                lastMouseX = event.getSceneX();
-                lastMouseY = event.getSceneY();
-            });
-
-            scene.setOnMouseDragged(event -> {
-                double deltaX = event.getSceneX() - lastMouseX;
-                double deltaY = event.getSceneY() - lastMouseY;
-
-                rotationY -= deltaX * 0.5;
-                rotationX -= deltaY * 0.5;
-
-                rotationX = Math.max(-90, Math.min(90, rotationX));
-
-                lastMouseX = event.getSceneX();
-                lastMouseY = event.getSceneY();
-            });
-
-            fxPanel.setScene(scene);
-
-            animationTimer = new AnimationTimer() {
-                private long lastUpdate = 0;
-
-                @Override
-                public void handle(long now) {
-                    if (lastUpdate == 0) {
-                        lastUpdate = now;
-                        return;
-                    }
-
-                    double deltaTime = (now - lastUpdate) / 1_000_000_000.0;
-                    lastUpdate = now;
-
-                    updateAnimation(deltaTime);
-                }
-            };
-            animationTimer.start();
         }
 
         private void updateAnimation(double deltaTime) {
@@ -632,59 +792,52 @@ public class WorkspacePanelPlayerAnimations extends AbstractResourcePanel<String
             }
 
             applyAnimation(anim, (float) animationTime);
-            controlPanel.getTimelinePanel().setCurrentTime((float) animationTime);
-
-            if (autoRotate && !isPlaying) {
-                modelRotation.setAngle(modelRotation.getAngle() + 0.5);
-            } else if (!autoRotate) {
-                modelRotation.setAngle(rotationY);
-            }
+            SwingUtilities.invokeLater(() -> controlPanel.getTimelinePanel().setCurrentTime((float) animationTime));
         }
 
         private void applyAnimation(AnimationData anim, float time) {
-            playerModel.resetPose();
+            Map<String, Map<String, Vec3>> transforms = new HashMap<>();
 
+            // JSON "body" moves the whole player -> HTML "root"
             if (anim.bones.containsKey("body")) {
                 BoneData rootBone = anim.bones.get("body");
-                Vec3 pos = interpolate(rootBone.positions, time);
-                Vec3 rot = interpolate(rootBone.rotations, time);
-                Vec3 scale = interpolate(rootBone.scales, time);
-                playerModel.applyRootTransform(pos, rot, scale);
+                addTransform(transforms, "root", rootBone, time);
             }
 
-            if (anim.bones.containsKey("head")) {
-                applyBoneTransform(anim.bones.get("head"), time, playerModel.head);
-            }
+            // JSON "torso" moves the chest mesh -> HTML "body"
             if (anim.bones.containsKey("torso")) {
-                applyBoneTransform(anim.bones.get("torso"), time, playerModel.body);
+                BoneData torsoBone = anim.bones.get("torso");
+                addTransform(transforms, "body", torsoBone, time);
             }
-            if (anim.bones.containsKey("right_arm")) {
-                applyBoneTransform(anim.bones.get("right_arm"), time, playerModel.rightArm);
+
+            String[] parts = {"head", "right_arm", "left_arm", "right_leg", "left_leg"};
+            String[] htmlIds = {"head", "right_arm", "left_arm", "right_leg", "left_leg"};
+
+            for (int i = 0; i < parts.length; i++) {
+                String part = parts[i];
+                if (anim.bones.containsKey(part)) {
+                    addTransform(transforms, htmlIds[i], anim.bones.get(part), time);
+                }
             }
-            if (anim.bones.containsKey("left_arm")) {
-                applyBoneTransform(anim.bones.get("left_arm"), time, playerModel.leftArm);
-            }
-            if (anim.bones.containsKey("right_leg")) {
-                applyBoneTransform(anim.bones.get("right_leg"), time, playerModel.rightLeg);
-            }
-            if (anim.bones.containsKey("left_leg")) {
-                applyBoneTransform(anim.bones.get("left_leg"), time, playerModel.leftLeg);
+
+            if (!transforms.isEmpty()) {
+                String json = gson.toJson(transforms);
+                executeScriptAsync("if(window.updateBones) window.updateBones(" + json + ");");
             }
         }
 
-        private void applyBoneTransform(BoneData bone, float time, PlayerPart part) {
-            Vec3 rotation = interpolate(bone.rotations, time);
-            Vec3 position = interpolate(bone.positions, time);
+        private void addTransform(Map<String, Map<String, Vec3>> transforms, String partName, BoneData bone, float time) {
+            Vec3 rot = interpolate(bone.rotations, time);
+            Vec3 pos = interpolate(bone.positions, time);
             Vec3 scale = interpolate(bone.scales, time);
 
-            if (rotation != null) {
-                part.setRotation(rotation.x, rotation.y, rotation.z);
-            }
-            if (position != null) {
-                part.setPosition(position.x, position.y, position.z);
-            }
-            if (scale != null) {
-                part.setScale(scale.x, scale.y, scale.z);
+            Map<String, Vec3> boneTrans = new HashMap<>();
+            if (rot != null) boneTrans.put("rotation", rot);
+            if (pos != null) boneTrans.put("position", pos);
+            if (scale != null) boneTrans.put("scale", scale);
+
+            if (!boneTrans.isEmpty()) {
+                transforms.put(partName, boneTrans);
             }
         }
 
@@ -1020,7 +1173,13 @@ public class WorkspacePanelPlayerAnimations extends AbstractResourcePanel<String
             } else if (element.isJsonObject()) {
                 JsonObject keyframes = element.getAsJsonObject();
                 for (String timeStr : keyframes.keySet()) {
-                    float time = Float.parseFloat(timeStr);
+                    float time;
+                    try {
+                        time = Float.parseFloat(timeStr);
+                    } catch (NumberFormatException e) {
+                        // Skip non-timestamp keys like "vector", "easing", etc.
+                        continue;
+                    }
                     JsonElement frameValue = keyframes.get(timeStr);
 
                     if (frameValue.isJsonArray() || frameValue.isJsonPrimitive()) {
@@ -1134,313 +1293,6 @@ public class WorkspacePanelPlayerAnimations extends AbstractResourcePanel<String
                 this.y = y;
                 this.z = z;
             }
-        }
-    }
-
-    private static Image createNearestNeighborUpscaledImage(Image img, int scale) {
-        if (img == null) return null;
-
-        int oldW = (int) img.getWidth();
-        int oldH = (int) img.getHeight();
-
-        int newW = oldW * scale;
-        int newH = oldH * scale;
-
-        WritableImage newImg = new WritableImage(newW, newH);
-        PixelReader reader = img.getPixelReader();
-        PixelWriter writer = newImg.getPixelWriter();
-
-        for (int y = 0; y < newH; y++) {
-            for (int x = 0; x < newW; x++) {
-                int oldX = x / scale;
-                int oldY = y / scale;
-                writer.setColor(x, y, reader.getColor(oldX, oldY));
-            }
-        }
-        return newImg;
-    }
-
-    private static class MinecraftPlayer {
-        Group group;
-        PlayerPart head, body, rightArm, leftArm, rightLeg, leftLeg;
-
-        private Rotate rootRotateX, rootRotateY, rootRotateZ;
-        private Translate rootPosition;
-        private Scale rootScale;
-
-        MinecraftPlayer() {
-            group = new Group();
-
-            Image skinAtlas = null;
-            try {
-                ImageIcon icon = UIRES.get("16px.steve");
-                java.awt.Image awtImage = icon.getImage();
-
-                BufferedImage bimg = new BufferedImage(
-                        awtImage.getWidth(null),
-                        awtImage.getHeight(null),
-                        BufferedImage.TYPE_INT_ARGB
-                );
-                Graphics2D g = bimg.createGraphics();
-                g.drawImage(awtImage, 0, 0, null);
-                g.dispose();
-
-                skinAtlas = SwingFXUtils.toFXImage(bimg, null);
-                skinAtlas = createNearestNeighborUpscaledImage(skinAtlas, 16);
-
-            } catch (Exception e) {
-                e.printStackTrace();
-                System.err.println("Failed to load skin from UIRES. Is the key correct?");
-            }
-            PhongMaterial skinMaterial = new PhongMaterial();
-            if (skinAtlas != null) {
-                skinMaterial.setDiffuseMap(skinAtlas);
-            } else {
-                skinMaterial.setDiffuseColor(Color.rgb(255, 220, 177));
-            }
-
-            head = new PlayerPart(8, 8, 8, skinMaterial,
-                    8, 0, 16, 0, 0, 8, 16, 8, 8, 8, 24, 8,
-                    0, 0, 0, 0, -4, 0);
-
-            body = new PlayerPart(8, 12, 4, skinMaterial,
-                    20, 16, 28, 16, 16, 20, 28, 20, 20, 20, 32, 20,
-                    0, 0, 0, 0, 6, 0);
-
-            rightArm = new PlayerPart(4, 12, 4, skinMaterial,
-                    44, 16, 48, 16, 40, 20, 48, 20, 44, 20, 52, 20,
-                    -5, 2, 0, -1, 4, 0);
-
-            leftArm = new PlayerPart(4, 12, 4, skinMaterial,
-                    36, 48, 40, 48, 32, 52, 40, 52, 36, 52, 44, 52,
-                    5, 2, 0, 1, 4, 0);
-
-            rightLeg = new PlayerPart(4, 12, 4, skinMaterial,
-                    4, 16, 8, 16, 0, 20, 8, 20, 4, 20, 12, 20,
-                    -1.9, 12, 0, 0, 6, 0);
-
-            leftLeg = new PlayerPart(4, 12, 4, skinMaterial,
-                    20, 48, 24, 48, 16, 52, 24, 52, 20, 52, 28, 52,
-                    1.9, 12, 0, 0, 6, 0);
-
-            rootPosition = new Translate(0, 0, 0);
-            rootRotateX = new Rotate(0, Rotate.X_AXIS);
-            rootRotateY = new Rotate(0, Rotate.Y_AXIS);
-            rootRotateZ = new Rotate(0, Rotate.Z_AXIS);
-            rootScale = new Scale(1, 1, 1);
-
-            group.getTransforms().addAll(rootPosition, rootRotateZ, rootRotateY, rootRotateX, rootScale);
-
-            group.getChildren().addAll(
-                    head.getGroup(),
-                    body.getGroup(),
-                    rightArm.getGroup(),
-                    leftArm.getGroup(),
-                    rightLeg.getGroup(),
-                    leftLeg.getGroup()
-            );
-
-            group.setTranslateY(0);
-        }
-
-        void addInternalTransforms() {
-            group.getTransforms().addAll(rootPosition, rootRotateZ, rootRotateY, rootRotateX, rootScale);
-        }
-
-        Group getGroup() {
-            return group;
-        }
-
-        void applyRootTransform(AnimationManager.Vec3 pos, AnimationManager.Vec3 rot, AnimationManager.Vec3 scale) {
-            if (pos != null) {
-                rootPosition.setX(-pos.x);
-                rootPosition.setY(-pos.y);
-                rootPosition.setZ(pos.z);
-            }
-
-            if (rot != null) {
-                rootRotateZ.setAngle(rot.z);
-                rootRotateY.setAngle(rot.y);
-                rootRotateX.setAngle(rot.x);
-            }
-            if (scale != null) {
-                rootScale.setX(scale.x);
-                rootScale.setY(scale.y);
-                rootScale.setZ(scale.z);
-            }
-        }
-
-        void resetRootTransform() {
-            rootPosition.setX(0); rootPosition.setY(0); rootPosition.setZ(0);
-            rootRotateX.setAngle(0); rootRotateY.setAngle(0); rootRotateZ.setAngle(0);
-            rootScale.setX(1); rootScale.setY(1); rootScale.setZ(1);
-        }
-
-        void resetPose() {
-            resetRootTransform();
-
-            head.reset();
-            body.reset();
-            rightArm.reset();
-            leftArm.reset();
-            rightLeg.reset();
-            leftLeg.reset();
-        }
-    }
-
-    private static class PlayerPart {
-        private Group group;
-        private MeshView meshView;
-        private Rotate rotateX, rotateY, rotateZ;
-        private Scale scale;
-        private double baseX, baseY, baseZ;
-
-        PlayerPart(float w, float h, float d, PhongMaterial material,
-                   float uvTopX, float uvTopY,
-                   float uvBottomX, float uvBottomY,
-                   float uvRightX, float uvRightY,
-                   float uvLeftX, float uvLeftY,
-                   float uvFrontX, float uvFrontY,
-                   float uvBackX, float uvBackY,
-                   double pivotX, double pivotY, double pivotZ,
-                   double boxOffsetX, double boxOffsetY, double boxOffsetZ) {
-
-            this.baseX = pivotX;
-            this.baseY = pivotY;
-            this.baseZ = pivotZ;
-
-            final float atlasW = 64f;
-            final float atlasH = 64f;
-
-            float hw = w / 2f;
-            float hh = h / 2f;
-            float hd = d / 2f;
-
-            // 8 Vertices of the box
-            float[] points = {
-                    -hw, -hh, -hd, // 0: Left-Top-Back
-                    hw, -hh, -hd, // 1: Right-Top-Back
-                    hw,  hh, -hd, // 2: Right-Bottom-Back
-                    -hw,  hh, -hd, // 3: Left-Bottom-Back
-                    -hw, -hh,  hd, // 4: Left-Top-Front
-                    hw, -hh,  hd, // 5: Right-Top-Front
-                    hw,  hh,  hd, // 6: Right-Bottom-Front
-                    -hw,  hh,  hd  // 7: Left-Bottom-Front
-            };
-
-            float[] texCoords = {
-                    // 0-3: Right face (+X) - (w=d, h=h)
-                    (uvRightX + 0) / atlasW, (uvRightY + 0) / atlasH,
-                    (uvRightX + d) / atlasW, (uvRightY + 0) / atlasH,
-                    (uvRightX + 0) / atlasW, (uvRightY + h) / atlasH,
-                    (uvRightX + d) / atlasW, (uvRightY + h) / atlasH,
-
-                    // 4-7: Left face (-X) - (w=d, h=h)
-                    (uvLeftX + 0) / atlasW, (uvLeftY + 0) / atlasH,
-                    (uvLeftX + d) / atlasW, (uvLeftY + 0) / atlasH,
-                    (uvLeftX + 0) / atlasW, (uvLeftY + h) / atlasH,
-                    (uvLeftX + d) / atlasW, (uvLeftY + h) / atlasH,
-
-                    // 8-11: Top face (-Y) - (w=w, h=d)
-                    (uvTopX + 0) / atlasW, (uvTopY + 0) / atlasH,
-                    (uvTopX + w) / atlasW, (uvTopY + 0) / atlasH,
-                    (uvTopX + 0) / atlasW, (uvTopY + d) / atlasH,
-                    (uvTopX + w) / atlasW, (uvTopY + d) / atlasH,
-
-                    // 12-15: Bottom face (+Y) - (w=w, h=d)
-                    (uvBottomX + 0) / atlasW, (uvBottomY + 0) / atlasH,
-                    (uvBottomX + w) / atlasW, (uvBottomY + 0) / atlasH,
-                    (uvBottomX + 0) / atlasW, (uvBottomY + d) / atlasH,
-                    (uvBottomX + w) / atlasW, (uvBottomY + d) / atlasH,
-
-                    // 16-19: Front face (+Z) - (w=w, h=h)
-                    (uvFrontX + 0) / atlasW, (uvFrontY + 0) / atlasH,
-                    (uvFrontX + w) / atlasW, (uvFrontY + 0) / atlasH,
-                    (uvFrontX + 0) / atlasW, (uvFrontY + h) / atlasH,
-                    (uvFrontX + w) / atlasW, (uvFrontY + h) / atlasH,
-
-                    // 20-23: Back face (-Z) - (w=w, h=h)
-                    (uvBackX + w) / atlasW, (uvBackY + 0) / atlasH,
-                    (uvBackX + 0) / atlasW, (uvBackY + 0) / atlasH,
-                    (uvBackX + w) / atlasW, (uvBackY + h) / atlasH,
-                    (uvBackX + 0) / atlasW, (uvBackY + h) / atlasH,
-            };
-
-            // Faces (12 triangles, 2 per face)
-            int[] faces = {
-                    // Right (+X) face: vertices
-                    5, 0,  1, 1,  6, 2,
-                    1, 1,  2, 3,  6, 2,
-                    // Left (-X) face: vertices
-                    0, 4,  4, 5,  3, 6,
-                    4, 5,  7, 7,  3, 6,
-                    // Top (-Y) face: vertices
-                    4, 10, 1, 9,  5, 11,
-                    4, 10, 0, 8,  1, 9,
-                    // Bottom (+Y) face: vertices
-                    7, 12, 6, 13, 3, 14,
-                    6, 13, 2, 15, 3, 14,
-                    // Back (-Z) face: vertices
-                    1, 16, 0, 17, 2, 18,
-                    0, 17, 3, 19, 2, 18,
-                    // Front (+Z) face: vertices
-                    4, 20, 5, 21, 6, 23,
-                    4, 20, 6, 23, 7, 22
-            };
-
-            TriangleMesh mesh = new TriangleMesh();
-            mesh.getPoints().addAll(points);
-            mesh.getTexCoords().addAll(texCoords);
-            mesh.getFaces().addAll(faces);
-
-            mesh.getFaceSmoothingGroups().addAll(0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5);
-
-            meshView = new MeshView(mesh);
-            meshView.setMaterial(material);
-
-            meshView.setTranslateX(boxOffsetX);
-            meshView.setTranslateY(boxOffsetY);
-            meshView.setTranslateZ(boxOffsetZ);
-
-            rotateX = new Rotate(0, Rotate.X_AXIS);
-            rotateY = new Rotate(0, Rotate.Y_AXIS);
-            rotateZ = new Rotate(0, Rotate.Z_AXIS);
-            scale = new Scale(1, 1, 1);
-
-            group = new Group(meshView);
-            group.getTransforms().addAll(rotateZ, rotateY, rotateX, scale);
-
-            group.setTranslateX(baseX);
-            group.setTranslateY(baseY);
-            group.setTranslateZ(baseZ);
-        }
-
-        void setRotation(double rx, double ry, double rz) {
-            rotateX.setAngle(rx);
-            rotateY.setAngle(ry);
-            rotateZ.setAngle(rz);
-        }
-
-        void setPosition(double x, double y, double z) {
-            group.setTranslateX(baseX + x);
-            group.setTranslateY(baseY - y);
-            group.setTranslateZ(baseZ + z);
-        }
-
-        void setScale(double sx, double sy, double sz) {
-            scale.setX(sx);
-            scale.setY(sy);
-            scale.setZ(sz);
-        }
-
-        Group getGroup() {
-            return group;
-        }
-
-        void reset() {
-            setRotation(0, 0, 0);
-            setPosition(0, 0, 0);
-            setScale(1, 1, 1);
         }
     }
 }

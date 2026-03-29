@@ -2,7 +2,6 @@ import groovy.json.JsonSlurper
 
 plugins {
     id "java"
-    id 'org.openjfx.javafxplugin' version '0.1.0'
 }
 
 repositories {
@@ -16,11 +15,6 @@ version = new JsonSlurper().parse(file('src/main/resources/plugin.json'))['info'
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
-javafx {
-    version = "21.0.7"
-    modules = ['javafx.swing', 'javafx.web']
-}
-
 dependencies {
     implementation project(':MCreator')
 
@@ -30,9 +24,6 @@ dependencies {
                 implementation it
             }
     )
-
-    implementation group: 'org.openjfx', name: 'javafx-web', version: '21.0.7'
-    implementation group: 'org.openjfx', name: 'javafx-swing', version: '21.0.7'
 }
 
 tasks.jar {
