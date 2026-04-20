@@ -124,10 +124,9 @@ public abstract class PlayerAnimationMixin<T extends LivingEntity> {
 					shouldPlay = lastAnimationProgress <= soundTime || animationProgress >= soundTime;
 				}
 				if (shouldPlay && player.level() instanceof ClientLevel clientLevel) {
-					clientLevel.playLocalSound(
-						player.getX(), player.getY(), player.getZ(),
-						BuiltInRegistries.SOUND_EVENT.get(ResourceLocation.parse(soundId)),
-						SoundSource.NEUTRAL, 1.0F, 1.0F, false
+					mc.getSoundManager().play(
+						new EntityBoundSoundInstance(BuiltInRegistries.SOUND_EVENT.get(ResourceLocation.parse(soundId)),
+						SoundSource.NEUTRAL, 1.0F, 1.0F, player, player.level().random.nextLong()) { @Override public boolean isLooping() { return false; } }
 					);
 					playedSoundsTag.add(FloatTag.valueOf(soundTime));
 				}
