@@ -102,6 +102,8 @@ public abstract class PlayerAnimationMixin<T extends LivingEntity> {
 					data.remove("PlayerAnimationProgress");
 					data.remove("LastAnimationProgress");
 					data.remove("PlayedSoundTimes");
+					lastAnimationProgress = animationProgress;
+					playedSoundsTag = new ListTag();
 				}
 			}
 		}

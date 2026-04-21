@@ -20,7 +20,8 @@ public abstract class PlayerAnimationRendererMixin extends LivingEntityRenderer<
 		if (!master.equals("${modid}")) {
 			return;
 	    }
-		if (entity.getPersistentData().getBoolean("FirstPersonAnimation") && mc.options.getCameraType().isFirstPerson() && entity == mc.player && (mc.screen == null || mc.screen instanceof ChatScreen)) {
+	    CompoundTag data = entity.getPersistentData();
+		if ((data.getBoolean("FirstPersonAnimation") || data.contains("setNullRender")) && mc.options.getCameraType().isFirstPerson() && entity == mc.player && (mc.screen == null || mc.screen instanceof ChatScreen)) {
 			this.model.head.visible = false;
 			this.model.body.visible = false;
 			this.model.leftLeg.visible = false;
@@ -76,7 +77,7 @@ public abstract class PlayerAnimationRendererMixin extends LivingEntityRenderer<
 		            poseStack.translate(0, -0.75f, 0);
 		    }
 	    }
-	    if (firstPerson && g != 0) {
+	    if (firstPerson && g != 69) {
 	        poseStack.mulPose(Axis.YP.rotationDegrees(bodyYaw - player.getYRot()));
 	        poseStack.translate(0, 1.5f, 0);
 	        poseStack.mulPose(Axis.XP.rotationDegrees(-player.getXRot()));

@@ -40,7 +40,7 @@ public abstract class PlayerAnimationMixin {
 		CompoundTag data = player.getPersistentData();
 		String playingAnimation = data.getStringOr("PlayerCurrentAnimation", "");
 		boolean overrideAnimation = data.getBooleanOr("OverrideCurrentAnimation", false);
-		boolean firstPerson = data.getBooleanOr("FirstPersonAnimation", false) && mc.options.getCameraType().isFirstPerson() && player == mc.player && (mc.screen == null || mc.screen instanceof ChatScreen);
+		boolean firstPerson = (data.getBooleanOr("FirstPersonAnimation", false) || data.contains("setNullRender")) && mc.options.getCameraType().isFirstPerson() && player == mc.player && (mc.screen == null || mc.screen instanceof ChatScreen);
 		if (data.getBooleanOr("ResetPlayerAnimation", false)) {
 			data.remove("ResetPlayerAnimation");
 			data.remove("LastTickTime");
@@ -100,6 +100,8 @@ public abstract class PlayerAnimationMixin {
 					data.remove("PlayerAnimationProgress");
 					data.remove("LastAnimationProgress");
 					data.remove("PlayedSoundTimes");
+					lastAnimationProgress = animationProgress;
+					playedSoundsTag = new ListTag();
 				}
 			}
 		}
