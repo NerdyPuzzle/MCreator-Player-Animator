@@ -45,6 +45,7 @@ public abstract class PlayerAnimationMixin<T extends LivingEntity> {
 		String playingAnimation = data.getString("PlayerCurrentAnimation");
 		boolean overrideAnimation = data.getBoolean("OverrideCurrentAnimation");
 		boolean firstPerson = data.getBoolean("FirstPersonAnimation") && mc.options.getCameraType().isFirstPerson() && player == mc.player && (mc.screen == null || mc.screen instanceof ChatScreen);
+		player.noCulling = player != mc.player;
 		if (data.getBoolean("ResetPlayerAnimation")) {
 			data.remove("ResetPlayerAnimation");
 			data.remove("LastAnimationProgress");
@@ -96,6 +97,7 @@ public abstract class PlayerAnimationMixin<T extends LivingEntity> {
 					data.putBoolean("FirstPersonAnimation", false);
 					${JavaModName}PlayerAnimationAPI.active_animations.put(player, null);
 					animationProgress = animation.length;
+					player.noCulling = false;
 				} else if (animation.hold_on_last_frame) {
 					data.putFloat("PlayerAnimationProgress", animation.length);
 				} else if (animation.loop) {

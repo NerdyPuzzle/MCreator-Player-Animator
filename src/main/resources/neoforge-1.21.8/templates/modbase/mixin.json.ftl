@@ -29,6 +29,7 @@
     "CameraAccessor",
     "EntityRenderDispatcherMixin",
     "LivingEntityRendererMixin",
+    "EntityRendererMixin",
     "ItemInHandRendererMixin",
     "LevelRendererMixin"
   ],

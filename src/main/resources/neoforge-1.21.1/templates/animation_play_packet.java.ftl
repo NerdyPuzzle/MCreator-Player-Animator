@@ -21,12 +21,15 @@ public record PlayPlayerAnimationMessage(int player, String animation, boolean o
 				Player player = (Player) context.player().level().getEntity(message.player);
 				if (player == null)
 				    return;
+				if (player != context.player())
+				    player.noCulling = true;
 				CompoundTag data = player.getPersistentData();
 	            if (message.animation.isEmpty()) {
                     data.putBoolean("ResetPlayerAnimation", true);
                     data.putBoolean("FirstPersonAnimation", false);
                     data.remove("PlayerCurrentAnimation");
                     data.remove("PlayerAnimationProgress");
+                    player.noCulling = false;
                 } else {
 				    data.putString("PlayerCurrentAnimation", message.animation);
 				    data.putBoolean("OverrideCurrentAnimation", message.override);
