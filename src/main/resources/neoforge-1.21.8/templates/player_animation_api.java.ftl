@@ -527,4 +527,20 @@ public class ${JavaModName}PlayerAnimationAPI {
 			event.registerEntityModifier(PlayerRenderer.class, (entity, state) -> state.setRenderData(PLAYER, (Player) entity));
 		}
 	}
+
+    // Hacky shader issue fix
+	@EventBusSubscriber(Dist.CLIENT)
+	public static class RenderEvents {
+		@SubscribeEvent(priority = EventPriority.HIGHEST)
+		public static void renderArm(RenderArmEvent event) {
+			if (!Minecraft.getInstance().options.getCameraType().isFirstPerson())
+				event.setCanceled(true);
+		}
+
+		@SubscribeEvent(priority = EventPriority.HIGHEST)
+		public static void renderHand(RenderHandEvent event) {
+			if (!Minecraft.getInstance().options.getCameraType().isFirstPerson())
+				event.setCanceled(true);
+		}
+	}
 }
