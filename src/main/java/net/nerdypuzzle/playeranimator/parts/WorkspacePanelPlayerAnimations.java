@@ -33,6 +33,9 @@ import java.util.*;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class WorkspacePanelPlayerAnimations extends AbstractResourcePanel<String> {
     private AnimationManager animationManager;
@@ -632,21 +635,22 @@ public class WorkspacePanelPlayerAnimations extends AbstractResourcePanel<String
         private java.util.Timer animationTimer;
         private Map<String, AnimationData> animations;
         private List<String> animationNames;
-        private String currentAnimationName;
-        private double animationTime = 0;
+        private volatile String currentAnimationName;
+        private volatile double animationTime = 0;
         private AnimationControlPanel controlPanel;
-        private boolean isPlaying = false;
-        private double playbackSpeed = 1.0;
+        private volatile boolean isPlaying = false;
+        private volatile double playbackSpeed = 1.0;
 
         // Executor for async JS calls to avoid blocking EDT
         private final ExecutorService jsExecutor = Executors.newSingleThreadExecutor();
+        private final AtomicBoolean isExecutingJS = new AtomicBoolean(false);
         private final Gson gson = new Gson();
 
         public AnimationManager(WebView webView, AnimationControlPanel controls) {
             this.webView = webView;
             this.controlPanel = controls;
-            animations = new HashMap<>();
-            animationNames = new ArrayList<>();
+            animations = new ConcurrentHashMap<>();
+            animationNames = new CopyOnWriteArrayList<>();
 
             initWebView();
             setupControlListeners();
@@ -658,13 +662,29 @@ public class WorkspacePanelPlayerAnimations extends AbstractResourcePanel<String
             animationTimer.scheduleAtFixedRate(new TimerTask() {
                 @Override
                 public void run() {
-                    updateAnimation(0.016);
+                    try {
+                        updateAnimation(0.016);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 }
             }, 0, 16);
         }
 
         private void executeScriptAsync(String script) {
-            jsExecutor.submit(() -> webView.executeScript(script, WebView.JSExecutionType.LOCAL_SAFE));
+            if (script.contains("window.updateBones")) {
+                if (isExecutingJS.compareAndSet(false, true)) {
+                    jsExecutor.submit(() -> {
+                        try {
+                            webView.executeScript(script, WebView.JSExecutionType.LOCAL_SAFE);
+                        } finally {
+                            isExecutingJS.set(false);
+                        }
+                    });
+                }
+            } else {
+                jsExecutor.submit(() -> webView.executeScript(script, WebView.JSExecutionType.LOCAL_SAFE));
+            }
         }
 
         private void setupControlListeners() {
@@ -772,7 +792,7 @@ public class WorkspacePanelPlayerAnimations extends AbstractResourcePanel<String
                 if (animationTime >= anim.length) {
                     switch (loopType) {
                         case "Loop":
-                            animationTime = animationTime % anim.length;
+                            animationTime = anim.length > 0 ? animationTime % anim.length : 0;
                             break;
                         case "Hold on Last Frame":
                             animationTime = anim.length;
@@ -786,7 +806,7 @@ public class WorkspacePanelPlayerAnimations extends AbstractResourcePanel<String
                 }
 
                 SwingUtilities.invokeLater(() -> {
-                    controlPanel.getTimelineSlider().setValue((int) ((animationTime / anim.length) * 100));
+                    controlPanel.getTimelineSlider().setValue((int) (anim.length > 0 ? (animationTime / anim.length) * 100 : 0));
                     updateTimeLabel();
                 });
             }
