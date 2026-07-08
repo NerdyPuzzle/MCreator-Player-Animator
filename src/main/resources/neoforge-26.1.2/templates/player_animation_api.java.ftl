@@ -464,40 +464,33 @@ public class ${JavaModName}PlayerAnimationAPI {
 		}
 
 		private static void loadClientSideAnimations() {
-			List<JsonObject> jsons = new ArrayList<>();
-			List<String> namespaces = new ArrayList<>();
-			ModList.get().forEachModFile(modFile -> {
-				String modId = modFile.getModInfos().get(0).getModId();
-				Path rootPath = modFile.findResource("data");
-				if (rootPath == null || !Files.exists(rootPath)) {
-					return;
-				}
-				try {
-					Path animationsPath = rootPath.resolve(modId).resolve("bedrock_animations");
-					if (Files.exists(animationsPath) && Files.isDirectory(animationsPath)) {
-						try (Stream<Path> paths = Files.walk(animationsPath)) {
-							paths.filter(Files::isRegularFile)
-								 .filter(path -> path.toString().endsWith(".json"))
-								 .forEach(animationFile -> {
-									 try {
-										 String content = Files.readString(animationFile, StandardCharsets.UTF_8);
-										 JsonObject jsonObject = new Gson().fromJson(content, JsonObject.class);
-										 jsons.add(jsonObject);
-										 namespaces.add(modId);
-									 } catch (Exception e) {
-										 System.err.println("Failed to load animation file: " + animationFile + " - " + e.getMessage());
-									 }
-								 });
-						}
-					}
-				} catch (Exception e) {
-					System.err.println("Failed to process animations for mod: " + modId + " - " + e.getMessage());
-				}
-			});
-			if (!jsons.isEmpty()) {
-				loadAnimations(jsons, namespaces);
-			}
-		}
+            List<JsonObject> jsons = new ArrayList<>();
+            List<String> namespaces = new ArrayList<>();
+            Gson gson = new Gson();
+            ModList.get().forEachModFile(modFile -> {
+                String modId = modFile.getId();
+                JarContents contents = modFile.getContents();
+                String animationsFolder = "data/" + modId + "/bedrock_animations";
+                try {
+                    contents.visitContent(animationsFolder, (relativePath, resource) -> {
+                        if (relativePath.endsWith(".json")) {
+                            try (var reader = resource.bufferedReader()) {
+                                JsonObject jsonObject = gson.fromJson(reader, JsonObject.class);
+                                jsons.add(jsonObject);
+                                namespaces.add(modId);
+                            } catch (Exception e) {
+                                System.err.println("Failed to load animation file: " + relativePath + " - " + e.getMessage());
+                            }
+                        }
+                    });
+                } catch (Exception e) {
+                    System.err.println("Failed to process animations for mod: " + modId + " - " + e.getMessage());
+                }
+            });
+            if (!jsons.isEmpty()) {
+                loadAnimations(jsons, namespaces);
+            }
+        }
 
 		private static void loadAnimations(List<JsonObject> jsons, List<String> namespaces) {
 			int namespaceIndex = 0;
@@ -520,11 +513,16 @@ public class ${JavaModName}PlayerAnimationAPI {
 
 	@EventBusSubscriber(value = Dist.CLIENT)
 	public static class ClientAttachments {
-		public static final ContextKey<Player> PLAYER = new ContextKey<>(ResourceLocation.parse("c:player_attachment"));
+		public static final ContextKey<Player> PLAYER = new ContextKey<>(Identifier.parse("c:player_attachment"));
 
 		@SubscribeEvent
 		public static void register(RegisterRenderStateModifiersEvent event) {
-			event.registerEntityModifier(PlayerRenderer.class, (entity, state) -> state.setRenderData(PLAYER, (Player) entity));
+			event.registerAvatarEntityModifier(new AvatarRenderStateModifier() {
+			    @Override
+			    public <T extends Avatar & ClientAvatarEntity> void accept(T avatar, AvatarRenderState renderState) {
+			        renderState.setRenderData(PLAYER, (Player) avatar);
+			    }
+			});
 		}
 	}
 

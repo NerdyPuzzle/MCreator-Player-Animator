@@ -13,7 +13,7 @@ repositories {
 group = 'net.nerdypuzzle.playeranimator'
 version = new JsonSlurper().parse(file('src/main/resources/plugin.json'))['info']['version']
 
-java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
 
 dependencies {
     implementation project(':MCreator')
@@ -40,7 +40,7 @@ tasks.register('runMCreatorWithPlugin', JavaExec) {
 
     classpath = project(':MCreator').sourceSets.main.runtimeClasspath
 
-    main = 'net.mcreator.Launcher'
+    mainClass.set('net.mcreator.Launcher')
 
     workingDir = mcreator_path
 }

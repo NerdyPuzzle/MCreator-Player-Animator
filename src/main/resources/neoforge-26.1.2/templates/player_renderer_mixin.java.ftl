@@ -1,7 +1,7 @@
 package ${package}.mixin;
 
-@Mixin(PlayerRenderer.class)
-public abstract class PlayerAnimationRendererMixin extends LivingEntityRenderer<AbstractClientPlayer, PlayerRenderState, PlayerModel> {
+@Mixin(AvatarRenderer.class)
+public abstract class PlayerAnimationRendererMixin extends LivingEntityRenderer<AbstractClientPlayer, AvatarRenderState, PlayerModel> {
     private String master = null;
     private Minecraft mc = Minecraft.getInstance();
 
@@ -9,8 +9,8 @@ public abstract class PlayerAnimationRendererMixin extends LivingEntityRenderer<
         super(null, null, 0.5f);
     }
 
-    @Inject(method = "Lnet/minecraft/client/renderer/entity/player/PlayerRenderer;setupRotations(Lnet/minecraft/client/renderer/entity/state/PlayerRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;FF)V", at = @At("RETURN"))
-    private void setupRotations(PlayerRenderState renderState, PoseStack poseStack, float bodyRot, float scale_, CallbackInfo ci) {
+    @Inject(method = "Lnet/minecraft/client/renderer/entity/player/AvatarRenderer;setupRotations(Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;FF)V", at = @At("RETURN"))
+    private void setupRotations(AvatarRenderState renderState, PoseStack poseStack, float bodyRot, float scale_, CallbackInfo ci) {
 		Player player = (Player) renderState.getRenderData(${JavaModName}PlayerAnimationAPI.ClientAttachments.PLAYER);
 		if (player == null)
 		    return;

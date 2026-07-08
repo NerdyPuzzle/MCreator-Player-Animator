@@ -354,11 +354,16 @@ public class WorkspacePanelPlayerAnimations extends AbstractResourcePanel<String
         JSplitPane rightSplitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
         rightSplitPane.setResizeWeight(0.7);
 
-        String skinBase64 = getSteveSkinBase64();
-        String html = getPreviewTemplate(skinBase64);
-        String dataUri = "data:text/html;base64," + Base64.getEncoder().encodeToString(html.getBytes(StandardCharsets.UTF_8));
+        previewPanel = new WebView("about:blank");
 
-        previewPanel = new WebView(dataUri);
+        previewPanel.addLoadListener(() -> {
+            String skinBase64 = getSteveSkinBase64();
+            String html = getPreviewTemplate(skinBase64);
+            String base64Html = Base64.getEncoder().encodeToString(html.getBytes(StandardCharsets.UTF_8));
+            String injectionScript = "document.open(); document.write(atob('" + base64Html + "')); document.close();";
+            previewPanel.executeScript(injectionScript, WebView.JSExecutionType.LOCAL_SAFE);
+        });
+        
         JPanel previewContainer = new JPanel(new BorderLayout());
         previewContainer.add(previewPanel, BorderLayout.CENTER);
         previewContainer.setMinimumSize(new Dimension(0, 0));

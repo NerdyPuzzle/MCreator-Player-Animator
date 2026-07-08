@@ -7,7 +7,7 @@ public abstract class ItemInHandRendererMixin {
     private EntityRenderDispatcher dispatcher = null;
 
 	@Inject(method = "renderHandsWithItems", at = @At("HEAD"), cancellable = true)
-	private void renderHandsWithItems(float f, PoseStack poseStack, MultiBufferSource.BufferSource bufferSource, LocalPlayer localPlayer, int i, CallbackInfo ci) {
+	private void renderHandsWithItems(float f, PoseStack poseStack, SubmitNodeCollector collector, LocalPlayer localPlayer, int i, CallbackInfo ci) {
 		if (master == null) {
 		    if (!${JavaModName}PlayerAnimationAPI.animations.isEmpty())
 			    master = "${modid}";
@@ -22,9 +22,9 @@ public abstract class ItemInHandRendererMixin {
 			CompoundTag playerData = player.getPersistentData();
 			// Hack to make animations progress when in first person without first person mode enabled
 			if (!playerData.getStringOr("PlayerCurrentAnimation", "").isEmpty() && (!playerData.getBooleanOr("FirstPersonAnimation", false) || playerData.getBooleanOr("ResetPlayerAnimation", false))) {
-                PlayerRenderer renderer = (PlayerRenderer) dispatcher.getRenderer((AbstractClientPlayer) player);
-                PlayerModel model = renderer.getModel();
-                PlayerRenderState renderState = renderer.createRenderState((AbstractClientPlayer) player, f);
+                AvatarRenderer renderer = (AvatarRenderer) dispatcher.getRenderer((AbstractClientPlayer) player);
+                PlayerModel model = (PlayerModel) renderer.getModel();
+                AvatarRenderState renderState = (AvatarRenderState) renderer.createRenderState((AbstractClientPlayer) player, f);
                 renderState.ageInTicks = player.tickCount + f;
                 model.setupAnim(renderState);
 			}

@@ -5,8 +5,8 @@ public abstract class PlayerAnimationMixin {
 	private String master = null;
 	private Minecraft mc = Minecraft.getInstance();
 
-	@Inject(method = "Lnet/minecraft/client/model/PlayerModel;setupAnim(Lnet/minecraft/client/renderer/entity/state/PlayerRenderState;)V", at = @At(value = "HEAD"))
-	public void setupPivot(PlayerRenderState renderState, CallbackInfo ci) {
+	@Inject(method = "Lnet/minecraft/client/model/player/PlayerModel;setupAnim(Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;)V", at = @At(value = "HEAD"))
+	public void setupPivot(AvatarRenderState renderState, CallbackInfo ci) {
 		if (master == null)
 			master = "${modid}";
 		if (!master.equals("${modid}"))
@@ -15,7 +15,8 @@ public abstract class PlayerAnimationMixin {
 		if (player == null)
 			return;
 		PlayerModel model = (PlayerModel) (Object) this;
-		hideModelParts(model, false);
+		if (!player.getPersistentData().contains("setNullRender"))
+		    hideModelParts(model, false);
 		${JavaModName}PlayerAnimationAPI.PlayerAnimation animation = ${JavaModName}PlayerAnimationAPI.active_animations.get(player);
 		if (animation == null)
 			return;
@@ -24,8 +25,8 @@ public abstract class PlayerAnimationMixin {
 		renderState.isCrouching = false;
 	}
 
-	@Inject(method = "Lnet/minecraft/client/model/PlayerModel;setupAnim(Lnet/minecraft/client/renderer/entity/state/PlayerRenderState;)V", at = @At(value = "TAIL"))
-	public void setupAnim(PlayerRenderState renderState, CallbackInfo ci) {
+	@Inject(method = "Lnet/minecraft/client/model/player/PlayerModel;setupAnim(Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;)V", at = @At(value = "TAIL"))
+	public void setupAnim(AvatarRenderState renderState, CallbackInfo ci) {
 		if (renderState.ageInTicks <= 0)
 			return;
 		if (!master.equals("${modid}")) {
@@ -40,7 +41,7 @@ public abstract class PlayerAnimationMixin {
 		CompoundTag data = player.getPersistentData();
 		String playingAnimation = data.getStringOr("PlayerCurrentAnimation", "");
 		boolean overrideAnimation = data.getBooleanOr("OverrideCurrentAnimation", false);
-		boolean firstPerson = (data.getBooleanOr("FirstPersonAnimation", false) || data.contains("setNullRender")) && mc.options.getCameraType().isFirstPerson() && player == mc.player && (mc.screen == null || mc.screen instanceof ChatScreen);
+		boolean firstPerson = data.getBooleanOr("FirstPersonAnimation", false) && mc.options.getCameraType().isFirstPerson() && player == mc.player && (mc.screen == null || mc.screen instanceof ChatScreen);
 		if (data.getBooleanOr("ResetPlayerAnimation", false)) {
 			data.remove("ResetPlayerAnimation");
 			data.remove("LastTickTime");
@@ -51,7 +52,7 @@ public abstract class PlayerAnimationMixin {
 		if (playingAnimation.isEmpty()) {
 			return;
 		}
-		if (firstPerson)
+		if (firstPerson || data.contains("setNullRender"))
 			hideModelParts(model, true);
 		if (overrideAnimation) {
 			firstPerson = data.getBooleanOr("FirstPersonAnimation", false) && mc.options.getCameraType().isFirstPerson() && player == mc.player && (mc.screen == null || mc.screen instanceof ChatScreen);
@@ -125,8 +126,8 @@ public abstract class PlayerAnimationMixin {
 				}
 				if (shouldPlay && player.level() instanceof ClientLevel clientLevel) {
 					mc.getSoundManager().play(
-						new EntityBoundSoundInstance(BuiltInRegistries.SOUND_EVENT.getValue(ResourceLocation.parse(soundId)),
-						SoundSource.NEUTRAL, 1.0F, 1.0F, player, player.level().random.nextLong()) { @Override public boolean isLooping() { return false; } }
+						new EntityBoundSoundInstance(BuiltInRegistries.SOUND_EVENT.getValue(Identifier.parse(soundId)),
+						SoundSource.NEUTRAL, 1.0F, 1.0F, player, player.level().getRandom().nextLong()) { @Override public boolean isLooping() { return false; } }
 					);
 					playedSoundsTag.add(FloatTag.valueOf(soundTime));
 				}

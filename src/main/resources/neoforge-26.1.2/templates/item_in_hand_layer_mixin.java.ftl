@@ -4,8 +4,8 @@ package ${package}.mixin;
 public abstract class ItemInHandLayerMixin {
 	private String master = null;
 
-	@Inject(method = "renderArmWithItem", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/item/ItemStackRenderState;render(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;II)V"))
-	private void animateItem(ArmedEntityRenderState renderState, ItemStackRenderState itemStackRenderState, HumanoidArm arm, PoseStack poseStack, MultiBufferSource multiBufferSource, int i, CallbackInfo ci) {
+	@Inject(method = "submitArmWithItem", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/item/ItemStackRenderState;submit(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;III)V"))
+	private void animateItem(ArmedEntityRenderState renderState, ItemStackRenderState itemStackRenderState, ItemStack itemStack, HumanoidArm arm, PoseStack poseStack, SubmitNodeCollector collector, int packedLight, CallbackInfo ci) {
 		if (master == null) {
 			if (!${JavaModName}PlayerAnimationAPI.animations.isEmpty())
 				master = "${modid}";
@@ -15,7 +15,7 @@ public abstract class ItemInHandLayerMixin {
 		if (!master.equals("${modid}")) {
 			return;
 		}
-		if (renderState instanceof PlayerRenderState state) {
+		if (renderState instanceof AvatarRenderState state) {
 		    Player player = (Player) renderState.getRenderData(${JavaModName}PlayerAnimationAPI.ClientAttachments.PLAYER);
 		    if (player == null)
 		        return;

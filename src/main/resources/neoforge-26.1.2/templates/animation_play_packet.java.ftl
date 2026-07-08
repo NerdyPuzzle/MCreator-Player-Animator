@@ -2,7 +2,7 @@ package ${package}.network;
 
 @EventBusSubscriber
 public record PlayPlayerAnimationMessage(int player, String animation, boolean override, boolean firstPerson) implements CustomPacketPayload {
-	public static final Type<PlayPlayerAnimationMessage> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(${JavaModName}.MODID, "play_player_animation"));
+	public static final Type<PlayPlayerAnimationMessage> TYPE = new Type<>(Identifier.fromNamespaceAndPath(${JavaModName}.MODID, "play_player_animation"));
 	public static final StreamCodec<RegistryFriendlyByteBuf, PlayPlayerAnimationMessage> STREAM_CODEC = StreamCodec.of((RegistryFriendlyByteBuf buffer, PlayPlayerAnimationMessage message) -> {
 		buffer.writeInt(message.player);
 		buffer.writeUtf(message.animation);
