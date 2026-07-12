@@ -15,7 +15,9 @@ public abstract class PlayerAnimationMixin {
 		if (player == null)
 			return;
 		PlayerModel model = (PlayerModel) (Object) this;
-		if (!player.getPersistentData().contains("setNullRender"))
+		Minecraft mc = Minecraft.getInstance();
+		CompoundTag playerData = player.getPersistentData();
+		if ((mc.player == player && mc.options.getCameraType().isFirstPerson() && !playerData.contains("setNullRender")) || (mc.player == player && !mc.options.getCameraType().isFirstPerson()) || mc.player != player)
 		    hideModelParts(model, false);
 		${JavaModName}PlayerAnimationAPI.PlayerAnimation animation = ${JavaModName}PlayerAnimationAPI.active_animations.get(player);
 		if (animation == null)
@@ -52,7 +54,7 @@ public abstract class PlayerAnimationMixin {
 		if (playingAnimation.isEmpty()) {
 			return;
 		}
-		if (firstPerson || data.contains("setNullRender"))
+		if (firstPerson)
 			hideModelParts(model, true);
 		if (overrideAnimation) {
 			firstPerson = data.getBooleanOr("FirstPersonAnimation", false) && mc.options.getCameraType().isFirstPerson() && player == mc.player && (mc.screen == null || mc.screen instanceof ChatScreen);
