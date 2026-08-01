@@ -23,7 +23,8 @@ public abstract class PlayerAnimationMixin<T extends LivingEntity> {
 			return;
 		if (animation.bones.get("left_arm") != null || animation.bones.get("torso") != null || animation.bones.get("right_arm") != null)
 			model.attackTime = 0;
-		model.crouching = false;
+		if (animation.bones.get("left_leg") != null || animation.bones.get("right_leg") != null)
+			model.crouching = false;
 	}
 
 	@Inject(method = "setupAnim", at = @At(value = "TAIL"))

@@ -24,7 +24,8 @@ public abstract class PlayerAnimationMixin {
 			return;
 		if (animation.bones.get("left_arm") != null || animation.bones.get("torso") != null || animation.bones.get("right_arm") != null)
 			renderState.attackTime = 0;
-		renderState.isCrouching = false;
+		if (animation.bones.get("left_leg") != null || animation.bones.get("right_leg") != null)
+			renderState.isCrouching = false;
 	}
 
 	@Inject(method = "Lnet/minecraft/client/model/player/PlayerModel;setupAnim(Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;)V", at = @At(value = "TAIL"))
