@@ -25,7 +25,7 @@ public abstract class LivingEntityRendererMixin {
 		  if (mc.player == player && (mc.screen == null || mc.screen instanceof ChatScreen)) {
 			 CompoundTag playerData = player.getPersistentData();
 			 if (playerData.getBooleanOr("FirstPersonAnimation", false)) {
-				playerData.putInt("setNullRender", 1);
+				playerData.putInt("setNullRender", 2);
 				return originalLayers.stream().filter(layer -> layer instanceof PlayerItemInHandLayer).toList();
 			 }
 			 else if (playerData.contains("setNullRender")) {

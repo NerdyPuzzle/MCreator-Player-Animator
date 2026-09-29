@@ -58,7 +58,7 @@ public abstract class PlayerAnimationMixin {
 		if (firstPerson)
 			hideModelParts(model, true);
 		if (overrideAnimation) {
-			firstPerson = data.getBooleanOr("FirstPersonAnimation", false) && mc.options.getCameraType().isFirstPerson() && player == mc.player && (mc.screen == null || mc.screen instanceof ChatScreen);
+			firstPerson = data.getBooleanOr("FirstPersonAnimation", false) && mc.options.getCameraType().isFirstPerson() && player == mc.player;
 			${JavaModName}PlayerAnimationAPI.active_animations.put(player, null);
 			data.remove("PlayerAnimationProgress");
 			data.remove("LastAnimationProgress");

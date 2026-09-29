@@ -61,7 +61,7 @@ public abstract class PlayerAnimationMixin<T extends LivingEntity> {
 			data.remove("PlayerAnimationProgress");
 			data.remove("LastAnimationProgress");
 			data.remove("PlayedSoundTimes");
-			firstPerson = data.getBoolean("FirstPersonAnimation") && mc.options.getCameraType().isFirstPerson() && player == mc.player && (mc.screen == null || mc.screen instanceof ChatScreen);
+			firstPerson = data.getBoolean("FirstPersonAnimation") && mc.options.getCameraType().isFirstPerson() && player == mc.player;
 			${JavaModName}PlayerAnimationAPI.active_animations.put(player, null);
 		}
 		${JavaModName}PlayerAnimationAPI.PlayerAnimation animation = ${JavaModName}PlayerAnimationAPI.active_animations.get(player);

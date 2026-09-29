@@ -16,7 +16,7 @@ public abstract class ItemInHandRendererMixin {
 		}
 		if (!master.equals("${modid}"))
 			return;
-		if (localPlayer instanceof Player player && mc.player == player && (mc.screen == null || mc.screen instanceof ChatScreen)) {
+		if (localPlayer instanceof Player player && mc.player == player) {
 		    if (dispatcher == null)
 		        dispatcher = mc.getEntityRenderDispatcher();
 			CompoundTag playerData = player.getPersistentData();
@@ -25,7 +25,7 @@ public abstract class ItemInHandRendererMixin {
                 PlayerModel model = ((PlayerRenderer) dispatcher.getRenderer((AbstractClientPlayer) player)).getModel();
                 model.setupAnim((AbstractClientPlayer) player, 0, 0, player.tickCount + f, 0, 0);
 			}
-			if (playerData.getBoolean("FirstPersonAnimation"))
+			if (playerData.getBoolean("FirstPersonAnimation") && (mc.screen == null || mc.screen instanceof ChatScreen))
 			    ci.cancel();
 		}
 	}
