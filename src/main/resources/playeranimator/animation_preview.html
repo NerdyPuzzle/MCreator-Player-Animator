@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+    html, body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background-color: var(--backgroundColor);
+    }
+
+    body {
+        user-select: none;
+        -webkit-user-select: none;
+        font-family: sans-serif;
+    }
+
+    * {
+        -webkit-user-drag: none;
+    }
+
+    #scene {
+        width: 100%;
+        height: 100%;
+        perspective: 1000px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-top: -100px;
+        cursor: grab;
+    }
+
+    #scene:active {
+        cursor: grabbing;
+    }
+
+    #camera {
+        transform-style: preserve-3d;
+        transform: translateZ(-100px);
+    }
+
+    #pivot {
+        transform-style: preserve-3d;
+        transform-origin: 0 calc(8 * var(--s)) 0;
+    }
+
+    #root_group {
+        transform-style: preserve-3d;
+    }
+
+    :root {
+        --s: 12px;
+    }
+
+    .group {
+        transform-style: preserve-3d;
+        position: absolute;
+        top: 0;
+        left: 0;
+        will-change: transform;
+        pointer-events: none;
+    }
+
+    .mesh {
+        transform-style: preserve-3d;
+        position: absolute;
+        top: 0;
+        left: 0;
+        will-change: transform;
+        pointer-events: none;
+    }
+
+    .face {
+        position: absolute;
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
+        image-rendering: pixelated;
+        background-image: var(--skin);
+        background-size: calc(64 * var(--s)) calc(64 * var(--s));
+        background-repeat: no-repeat;
+        background-color: var(--altBackgroundColor);
+        pointer-events: none;
+    }
+
+    .f-front {
+        width: var(--w);
+        height: var(--h);
+        left: calc(var(--w) / -2);
+        top: calc(var(--h) / -2);
+        transform: translateZ(var(--d2)) scale(1.01);
+    }
+
+    .f-back {
+        width: var(--w);
+        height: var(--h);
+        left: calc(var(--w) / -2);
+        top: calc(var(--h) / -2);
+        transform: rotateY(180deg) translateZ(var(--d2)) scale3d(-1.01, 1.01, 1.01);
+    }
+
+    .f-right {
+        width: var(--d);
+        height: var(--h);
+        left: calc(var(--d) / -2);
+        top: calc(var(--h) / -2);
+        transform: rotateY(90deg)  translateZ(var(--w2)) scale3d(-1.01, 1.01, 1.01);
+    }
+
+    .f-left {
+        width: var(--d);
+        height: var(--h);
+        left: calc(var(--d) / -2);
+        top: calc(var(--h) / -2);
+        transform: rotateY(-90deg) translateZ(var(--w2)) scale3d(-1.01, 1.01, 1.01);
+    }
+
+    .f-top {
+        width: var(--w);
+        height: var(--d);
+        left: calc(var(--w) / -2);
+        top: calc(var(--d) / -2);
+        transform: rotateX(90deg)  translateZ(var(--h2)) scale(1.01);
+    }
+
+    .f-bottom {
+        width: var(--w);
+        height: var(--d);
+        left: calc(var(--w) / -2);
+        top: calc(var(--d) / -2);
+        transform: rotateX(-90deg) translateZ(var(--h2)) scale3d(1.01, -1.01, 1.01);
+    }
+</style>
+</head>
+<body>
+    <div id="scene">
+        <div id="camera">
+            <div id="pivot">
+                <div id="root_group">
+                    <div id="head_group" class="group" data-px="0" data-py="0" data-pz="0">
+                        <div class="mesh" style="transform: translate3d(0, calc(-4 * var(--s)), 0); --w:calc(8 * var(--s)); --h:calc(8 * var(--s)); --d:calc(8 * var(--s)); --w2:calc(4 * var(--s)); --h2:calc(4 * var(--s)); --d2:calc(4 * var(--s));">
+                            <div class="face f-front"  style="background-position: calc(-8 * var(--s)) calc(-8 * var(--s));"></div>
+                            <div class="face f-back"   style="background-position: calc(-24 * var(--s)) calc(-8 * var(--s));"></div>
+                            <div class="face f-right"  style="background-position: calc(-0 * var(--s)) calc(-8 * var(--s));"></div>
+                            <div class="face f-left"   style="background-position: calc(-16 * var(--s)) calc(-8 * var(--s));"></div>
+                            <div class="face f-top"    style="background-position: calc(-8 * var(--s)) calc(-0 * var(--s));"></div>
+                            <div class="face f-bottom" style="background-position: calc(-16 * var(--s)) calc(-0 * var(--s));"></div>
+                        </div>
+                    </div>
+                    <div id="body_group" class="group" data-px="0" data-py="0" data-pz="0">
+                        <div class="mesh" style="transform: translate3d(0, calc(6 * var(--s)), 0); --w:calc(8 * var(--s)); --h:calc(12 * var(--s)); --d:calc(4 * var(--s)); --w2:calc(4 * var(--s)); --h2:calc(6 * var(--s)); --d2:calc(2 * var(--s));">
+                            <div class="face f-front"  style="background-position: calc(-20 * var(--s)) calc(-20 * var(--s));"></div>
+                            <div class="face f-back"   style="background-position: calc(-32 * var(--s)) calc(-20 * var(--s));"></div>
+                            <div class="face f-right"  style="background-position: calc(-28 * var(--s)) calc(-20 * var(--s));"></div>
+                            <div class="face f-left"   style="background-position: calc(-16 * var(--s)) calc(-20 * var(--s));"></div>
+                            <div class="face f-top"    style="background-position: calc(-20 * var(--s)) calc(-16 * var(--s));"></div>
+                            <div class="face f-bottom" style="background-position: calc(-28 * var(--s)) calc(-16 * var(--s));"></div>
+                        </div>
+                    </div>
+                    <div id="right_arm_group" class="group" data-px="-5" data-py="2" data-pz="0">
+                        <div class="mesh" style="transform: translate3d(calc(-1 * var(--s)), calc(4 * var(--s)), 0); --w:calc(4 * var(--s)); --h:calc(12 * var(--s)); --d:calc(4 * var(--s)); --w2:calc(2 * var(--s)); --h2:calc(6 * var(--s)); --d2:calc(2 * var(--s));">
+                            <div class="face f-front"  style="background-position: calc(-44 * var(--s)) calc(-20 * var(--s));"></div>
+                            <div class="face f-back"   style="background-position: calc(-52 * var(--s)) calc(-20 * var(--s));"></div>
+                            <div class="face f-right"  style="background-position: calc(-40 * var(--s)) calc(-20 * var(--s));"></div>
+                            <div class="face f-left"   style="background-position: calc(-48 * var(--s)) calc(-20 * var(--s));"></div>
+                            <div class="face f-top"    style="background-position: calc(-44 * var(--s)) calc(-16 * var(--s));"></div>
+                            <div class="face f-bottom" style="background-position: calc(-48 * var(--s)) calc(-16 * var(--s));"></div>
+                        </div>
+                    </div>
+                    <div id="left_arm_group" class="group" data-px="5" data-py="2" data-pz="0">
+                        <div class="mesh" style="transform: translate3d(calc(1 * var(--s)), calc(4 * var(--s)), 0); --w:calc(4 * var(--s)); --h:calc(12 * var(--s)); --d:calc(4 * var(--s)); --w2:calc(2 * var(--s)); --h2:calc(6 * var(--s)); --d2:calc(2 * var(--s));">
+                            <div class="face f-front"  style="background-position: calc(-36 * var(--s)) calc(-52 * var(--s));"></div>
+                            <div class="face f-back"   style="background-position: calc(-44 * var(--s)) calc(-52 * var(--s));"></div>
+                            <div class="face f-right"  style="background-position: calc(-32 * var(--s)) calc(-52 * var(--s));"></div>
+                            <div class="face f-left"   style="background-position: calc(-40 * var(--s)) calc(-52 * var(--s));"></div>
+                            <div class="face f-top"    style="background-position: calc(-36 * var(--s)) calc(-48 * var(--s));"></div>
+                            <div class="face f-bottom" style="background-position: calc(-40 * var(--s)) calc(-48 * var(--s));"></div>
+                        </div>
+                    </div>
+                    <div id="right_leg_group" class="group" data-px="-1.9" data-py="12" data-pz="0">
+                        <div class="mesh" style="transform: translate3d(0, calc(6 * var(--s)), 0); --w:calc(4 * var(--s)); --h:calc(12 * var(--s)); --d:calc(4 * var(--s)); --w2:calc(2 * var(--s)); --h2:calc(6 * var(--s)); --d2:calc(2 * var(--s));">
+                            <div class="face f-front"  style="background-position: calc(-4 * var(--s)) calc(-20 * var(--s));"></div>
+                            <div class="face f-back"   style="background-position: calc(-12 * var(--s)) calc(-20 * var(--s));"></div>
+                            <div class="face f-right"  style="background-position: calc(-0 * var(--s)) calc(-20 * var(--s));"></div>
+                            <div class="face f-left"   style="background-position: calc(-8 * var(--s)) calc(-20 * var(--s));"></div>
+                            <div class="face f-top"    style="background-position: calc(-4 * var(--s)) calc(-16 * var(--s));"></div>
+                            <div class="face f-bottom" style="background-position: calc(-8 * var(--s)) calc(-16 * var(--s));"></div>
+                        </div>
+                    </div>
+                    <div id="left_leg_group" class="group" data-px="1.9" data-py="12" data-pz="0">
+                        <div class="mesh" style="transform: translate3d(0, calc(6 * var(--s)), 0); --w:calc(4 * var(--s)); --h:calc(12 * var(--s)); --d:calc(4 * var(--s)); --w2:calc(2 * var(--s)); --h2:calc(6 * var(--s)); --d2:calc(2 * var(--s));">
+                            <div class="face f-front"  style="background-position: calc(-20 * var(--s)) calc(-52 * var(--s));"></div>
+                            <div class="face f-back"   style="background-position: calc(-28 * var(--s)) calc(-52 * var(--s));"></div>
+                            <div class="face f-right"  style="background-position: calc(-16 * var(--s)) calc(-52 * var(--s));"></div>
+                            <div class="face f-left"   style="background-position: calc(-24 * var(--s)) calc(-52 * var(--s));"></div>
+                            <div class="face f-top"    style="background-position: calc(-20 * var(--s)) calc(-48 * var(--s));"></div>
+                            <div class="face f-bottom" style="background-position: calc(-24 * var(--s)) calc(-48 * var(--s));"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+<script>
+function setSkin(skin) {
+  document.documentElement.style.setProperty('--skin', `url("${skin}")`);
+}
+
+const parts = ['head', 'body', 'right_arm', 'left_arm', 'right_leg', 'left_leg'];
+const S = 12;
+function updateTransform(part, t, r, s) {
+  const g = document.getElementById(part + '_group');
+  if (!g) return;
+  const px = parseFloat(g.dataset.px);
+  const py = parseFloat(g.dataset.py);
+  const pz = parseFloat(g.dataset.pz);
+  let tx = (px + t.x) * S;
+  let ty = (py - t.y) * S;
+  let tz = -(pz + t.z) * S;
+  g.style.transform = `translate3d(${tx}px, ${ty}px, ${tz}px)
+                       rotateZ(${r.z}deg) rotateY(${-r.y}deg) rotateX(${-r.x}deg)
+                       scale3d(${s.x}, ${s.y}, ${s.z})`;
+}
+function updateRoot(t, r, s) {
+  const g = document.getElementById('root_group');
+  if (!g) return;
+  let tx = (t.x) * S;
+  let ty = -(t.y) * S;
+  let tz = -(t.z) * S;
+  g.style.transform = `translate3d(${tx}px, ${ty}px, ${tz}px)
+                       rotateZ(${r.z}deg) rotateY(${-r.y}deg) rotateX(${-r.x}deg)
+                       scale3d(${s.x}, ${s.y}, ${s.z})`;
+}
+function updateBones(data) {
+  if (data.root) {
+    updateRoot(data.root.position || {x:0,y:0,z:0}, data.root.rotation || {x:0,y:0,z:0}, data.root.scale || {x:1,y:1,z:1});
+  }
+  parts.forEach(p => {
+    let d = data[p] || {};
+    updateTransform(p, d.position || {x:0,y:0,z:0}, d.rotation || {x:0,y:0,z:0}, d.scale || {x:1,y:1,z:1});
+  });
+}
+function resetPose() {
+  updateRoot({x:0,y:0,z:0}, {x:0,y:0,z:0}, {x:1,y:1,z:1});
+  parts.forEach(p => updateTransform(p, {x:0,y:0,z:0}, {x:0,y:0,z:0}, {x:1,y:1,z:1}));
+}
+resetPose();
+// Drag Logic
+var isDragging = false;
+var lastX = 0;
+var lastY = 0;
+var rotY = 0;
+var rotX = 0;
+var pivot = document.getElementById('pivot');
+
+document.addEventListener('mousedown', function(e) {
+  if (e.button !== 0) return;
+  isDragging = true;
+  lastX = e.clientX;
+  lastY = e.clientY;
+});
+
+document.addEventListener('mouseup', function(e) {
+  isDragging = false;
+});
+
+document.addEventListener('mousemove', function(e) {
+  // if isDragging is true but buttons are not held (1), reset state
+  if (!isDragging && (e.buttons & 1) === 0) return;
+  if (isDragging && (e.buttons & 1) === 0) {
+    isDragging = false;
+    return;
+  }
+  // If we are here, we are dragging or mouse is held down
+  if (!isDragging && (e.buttons & 1) === 1) {
+      isDragging = true;
+      lastX = e.clientX;
+      lastY = e.clientY;
+  }
+
+  var dx = e.clientX - lastX;
+  var dy = e.clientY - lastY;
+
+  lastX = e.clientX;
+  lastY = e.clientY;
+
+  rotY += dx * 0.5;
+  rotX -= dy * 0.5;
+
+  if (rotX > 90) rotX = 90;
+  if (rotX < -90) rotX = -90;
+
+  if (pivot) pivot.style.transform = 'rotateX(' + (-rotX) + 'deg) rotateY(' + rotY + 'deg)';
+});
+</script>
+</body>
+</html>

@@ -28,7 +28,6 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileReader;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -38,217 +37,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class WorkspacePanelPlayerAnimations extends AbstractResourcePanel<String> {
-    private AnimationManager animationManager;
-    private WebView previewPanel;
-    private AnimationControlPanel controlPanel;
-
-    private static String getPreviewTemplate(String skinBase64) {
-        return "<!DOCTYPE html>" +
-                "<html><head><style>" +
-                "html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background-color: #2b2b2b; }" +
-                "body { user-select: none; -webkit-user-select: none; font-family: sans-serif; }" +
-                "* { -webkit-user-drag: none; }" +
-
-                // Scene Container
-                "#scene { width: 100%; height: 100%; perspective: 1000px; display: flex; justify-content: center; align-items: center; margin-top: -100px; cursor: grab; }" +
-                "#scene:active { cursor: grabbing; }" +
-
-                "#camera { transform-style: preserve-3d; transform: translateZ(-100px); }" +
-                "#pivot { transform-style: preserve-3d; }" +
-                "#root_group { transform-style: preserve-3d; }" +
-
-                ":root { --s: 12px; }" +
-
-                ".group { transform-style: preserve-3d; position: absolute; top:0; left:0; will-change: transform; pointer-events: none; }" +
-                ".mesh { transform-style: preserve-3d; position: absolute; top:0; left:0; will-change: transform; pointer-events: none; }" +
-
-                ".face { " +
-                "  position: absolute; " +
-                "  backface-visibility: hidden; " +
-                "  -webkit-backface-visibility: hidden; " +
-                "  image-rendering: pixelated; " +
-                "  background-image: url('" + skinBase64 + "'); " +
-                "  background-size: calc(64 * var(--s)) calc(64 * var(--s)); " +
-                "  background-repeat: no-repeat; " +
-                "  background-color: #1a1a1a; " +
-                "  pointer-events: none; " +
-                "}" +
-
-                // Face Transforms
-                // Uses scale(1.01) to hide gaps.
-
-                ".f-front  { width: var(--w); height: var(--h); left: calc(var(--w) / -2); top: calc(var(--h) / -2); transform: translateZ(var(--d2)) scale(1.01); }" +
-
-                ".f-back   { width: var(--w); height: var(--h); left: calc(var(--w) / -2); top: calc(var(--h) / -2); transform: rotateY(180deg) translateZ(var(--d2)) scale3d(-1.01, 1.01, 1.01); }" +
-                ".f-right  { width: var(--d); height: var(--h); left: calc(var(--d) / -2); top: calc(var(--h) / -2); transform: rotateY(90deg)  translateZ(var(--w2)) scale3d(-1.01, 1.01, 1.01); }" +
-                ".f-left   { width: var(--d); height: var(--h); left: calc(var(--d) / -2); top: calc(var(--h) / -2); transform: rotateY(-90deg) translateZ(var(--w2)) scale3d(-1.01, 1.01, 1.01); }" +
-
-                ".f-top    { width: var(--w); height: var(--d); left: calc(var(--w) / -2); top: calc(var(--d) / -2); transform: rotateX(90deg)  translateZ(var(--h2)) scale(1.01); }" +
-                ".f-bottom { width: var(--w); height: var(--d); left: calc(var(--w) / -2); top: calc(var(--d) / -2); transform: rotateX(-90deg) translateZ(var(--h2)) scale3d(1.01, -1.01, 1.01); }" +
-
-                "</style></head>" +
-                "<body>" +
-                "<div id='scene'><div id='camera'><div id='pivot'>" +
-                "<div id='root_group'>" +
-
-                // HEAD
-                "  <div id='head_group' class='group' data-px='0' data-py='0' data-pz='0'>" +
-                "    <div class='mesh' style='transform: translate3d(0, calc(-4 * var(--s)), 0); --w:calc(8 * var(--s)); --h:calc(8 * var(--s)); --d:calc(8 * var(--s)); --w2:calc(4 * var(--s)); --h2:calc(4 * var(--s)); --d2:calc(4 * var(--s));'>" +
-                "      <div class='face f-front'  style='background-position: calc(-8 * var(--s)) calc(-8 * var(--s));'></div>" +
-                "      <div class='face f-back'   style='background-position: calc(-24 * var(--s)) calc(-8 * var(--s));'></div>" +
-                "      <div class='face f-right'  style='background-position: calc(-0 * var(--s)) calc(-8 * var(--s));'></div>" +
-                "      <div class='face f-left'   style='background-position: calc(-16 * var(--s)) calc(-8 * var(--s));'></div>" +
-                "      <div class='face f-top'    style='background-position: calc(-8 * var(--s)) calc(-0 * var(--s));'></div>" +
-                "      <div class='face f-bottom' style='background-position: calc(-16 * var(--s)) calc(-0 * var(--s));'></div>" +
-                "    </div>" +
-                "  </div>" +
-
-                // BODY (TORSO)
-                "  <div id='body_group' class='group' data-px='0' data-py='0' data-pz='0'>" +
-                "    <div class='mesh' style='transform: translate3d(0, calc(6 * var(--s)), 0); --w:calc(8 * var(--s)); --h:calc(12 * var(--s)); --d:calc(4 * var(--s)); --w2:calc(4 * var(--s)); --h2:calc(6 * var(--s)); --d2:calc(2 * var(--s));'>" +
-                "      <div class='face f-front'  style='background-position: calc(-20 * var(--s)) calc(-20 * var(--s));'></div>" +
-                "      <div class='face f-back'   style='background-position: calc(-32 * var(--s)) calc(-20 * var(--s));'></div>" +
-                "      <div class='face f-right'  style='background-position: calc(-28 * var(--s)) calc(-20 * var(--s));'></div>" + // Left UV on Right face
-                "      <div class='face f-left'   style='background-position: calc(-16 * var(--s)) calc(-20 * var(--s));'></div>" + // Right UV on Left face
-                "      <div class='face f-top'    style='background-position: calc(-20 * var(--s)) calc(-16 * var(--s));'></div>" +
-                "      <div class='face f-bottom' style='background-position: calc(-28 * var(--s)) calc(-16 * var(--s));'></div>" +
-                "    </div>" +
-                "  </div>" +
-
-                // RIGHT ARM
-                "  <div id='right_arm_group' class='group' data-px='-5' data-py='2' data-pz='0'>" +
-                "    <div class='mesh' style='transform: translate3d(calc(-1 * var(--s)), calc(4 * var(--s)), 0); --w:calc(4 * var(--s)); --h:calc(12 * var(--s)); --d:calc(4 * var(--s)); --w2:calc(2 * var(--s)); --h2:calc(6 * var(--s)); --d2:calc(2 * var(--s));'>" +
-                "      <div class='face f-front'  style='background-position: calc(-44 * var(--s)) calc(-20 * var(--s));'></div>" +
-                "      <div class='face f-back'   style='background-position: calc(-52 * var(--s)) calc(-20 * var(--s));'></div>" +
-                "      <div class='face f-right'  style='background-position: calc(-40 * var(--s)) calc(-20 * var(--s));'></div>" +
-                "      <div class='face f-left'   style='background-position: calc(-48 * var(--s)) calc(-20 * var(--s));'></div>" +
-                "      <div class='face f-top'    style='background-position: calc(-44 * var(--s)) calc(-16 * var(--s));'></div>" +
-                "      <div class='face f-bottom' style='background-position: calc(-48 * var(--s)) calc(-16 * var(--s));'></div>" +
-                "    </div>" +
-                "  </div>" +
-
-                // LEFT ARM
-                "  <div id='left_arm_group' class='group' data-px='5' data-py='2' data-pz='0'>" +
-                "    <div class='mesh' style='transform: translate3d(calc(1 * var(--s)), calc(4 * var(--s)), 0); --w:calc(4 * var(--s)); --h:calc(12 * var(--s)); --d:calc(4 * var(--s)); --w2:calc(2 * var(--s)); --h2:calc(6 * var(--s)); --d2:calc(2 * var(--s));'>" +
-                "      <div class='face f-front'  style='background-position: calc(-36 * var(--s)) calc(-52 * var(--s));'></div>" +
-                "      <div class='face f-back'   style='background-position: calc(-44 * var(--s)) calc(-52 * var(--s));'></div>" +
-                "      <div class='face f-right'  style='background-position: calc(-32 * var(--s)) calc(-52 * var(--s));'></div>" +
-                "      <div class='face f-left'   style='background-position: calc(-40 * var(--s)) calc(-52 * var(--s));'></div>" +
-                "      <div class='face f-top'    style='background-position: calc(-36 * var(--s)) calc(-48 * var(--s));'></div>" +
-                "      <div class='face f-bottom' style='background-position: calc(-40 * var(--s)) calc(-48 * var(--s));'></div>" +
-                "    </div>" +
-                "  </div>" +
-
-                // RIGHT LEG
-                "  <div id='right_leg_group' class='group' data-px='-1.9' data-py='12' data-pz='0'>" +
-                "    <div class='mesh' style='transform: translate3d(0, calc(6 * var(--s)), 0); --w:calc(4 * var(--s)); --h:calc(12 * var(--s)); --d:calc(4 * var(--s)); --w2:calc(2 * var(--s)); --h2:calc(6 * var(--s)); --d2:calc(2 * var(--s));'>" +
-                "      <div class='face f-front'  style='background-position: calc(-4 * var(--s)) calc(-20 * var(--s));'></div>" +
-                "      <div class='face f-back'   style='background-position: calc(-12 * var(--s)) calc(-20 * var(--s));'></div>" +
-                "      <div class='face f-right'  style='background-position: calc(-0 * var(--s)) calc(-20 * var(--s));'></div>" +
-                "      <div class='face f-left'   style='background-position: calc(-8 * var(--s)) calc(-20 * var(--s));'></div>" +
-                "      <div class='face f-top'    style='background-position: calc(-4 * var(--s)) calc(-16 * var(--s));'></div>" +
-                "      <div class='face f-bottom' style='background-position: calc(-8 * var(--s)) calc(-16 * var(--s));'></div>" +
-                "    </div>" +
-                "  </div>" +
-
-                // LEFT LEG
-                "  <div id='left_leg_group' class='group' data-px='1.9' data-py='12' data-pz='0'>" +
-                "    <div class='mesh' style='transform: translate3d(0, calc(6 * var(--s)), 0); --w:calc(4 * var(--s)); --h:calc(12 * var(--s)); --d:calc(4 * var(--s)); --w2:calc(2 * var(--s)); --h2:calc(6 * var(--s)); --d2:calc(2 * var(--s));'>" +
-                "      <div class='face f-front'  style='background-position: calc(-20 * var(--s)) calc(-52 * var(--s));'></div>" +
-                "      <div class='face f-back'   style='background-position: calc(-28 * var(--s)) calc(-52 * var(--s));'></div>" +
-                "      <div class='face f-right'  style='background-position: calc(-16 * var(--s)) calc(-52 * var(--s));'></div>" +
-                "      <div class='face f-left'   style='background-position: calc(-24 * var(--s)) calc(-52 * var(--s));'></div>" +
-                "      <div class='face f-top'    style='background-position: calc(-20 * var(--s)) calc(-48 * var(--s));'></div>" +
-                "      <div class='face f-bottom' style='background-position: calc(-24 * var(--s)) calc(-48 * var(--s));'></div>" +
-                "    </div>" +
-                "  </div>" +
-
-                "</div></div></div></div>" +
-                "<script>" +
-                "const parts = ['head', 'body', 'right_arm', 'left_arm', 'right_leg', 'left_leg'];" +
-                "const S = 12;" +
-                "function updateTransform(part, t, r, s) {" +
-                "  const g = document.getElementById(part + '_group');" +
-                "  if(!g) return;" +
-                "  const px = parseFloat(g.dataset.px);" +
-                "  const py = parseFloat(g.dataset.py);" +
-                "  const pz = parseFloat(g.dataset.pz);" +
-                "  let tx = (px + t.x) * S;" +
-                "  let ty = (py - t.y) * S;" +
-                "  let tz = -(pz + t.z) * S;" +
-                "  g.style.transform = `translate3d(${tx}px, ${ty}px, ${tz}px) " +
-                "                       rotateZ(${r.z}deg) rotateY(${-r.y}deg) rotateX(${-r.x}deg) " +
-                "                       scale3d(${s.x}, ${s.y}, ${s.z})`;" +
-                "}" +
-                "function updateRoot(t, r, s) {" +
-                "  const g = document.getElementById('root_group');" +
-                "  if(!g) return;" +
-                "  let tx = (t.x) * S;" +
-                "  let ty = -(t.y) * S;" +
-                "  let tz = -(t.z) * S;" +
-                "  g.style.transform = `translate3d(${tx}px, ${ty}px, ${tz}px) " +
-                "                       rotateZ(${r.z}deg) rotateY(${-r.y}deg) rotateX(${-r.x}deg) " +
-                "                       scale3d(${s.x}, ${s.y}, ${s.z})`;" +
-                "}" +
-                "function updateBones(data) {" +
-                "  if(data.root) updateRoot(data.root.position||{x:0,y:0,z:0}, data.root.rotation||{x:0,y:0,z:0}, data.root.scale||{x:1,y:1,z:1});" +
-                "  parts.forEach(p => {" +
-                "    let d = data[p] || {};" +
-                "    updateTransform(p, d.position || {x:0,y:0,z:0}, d.rotation || {x:0,y:0,z:0}, d.scale || {x:1,y:1,z:1});" +
-                "  });" +
-                "}" +
-                "function resetPose() { updateRoot({x:0,y:0,z:0},{x:0,y:0,z:0},{x:1,y:1,z:1}); parts.forEach(p => updateTransform(p, {x:0,y:0,z:0}, {x:0,y:0,z:0}, {x:1,y:1,z:1})); }" +
-                "resetPose();" +
-
-                "// Drag Logic - Attached to document to capture all events reliably\n" +
-                "var isDragging = false;\n" +
-                "var lastX = 0;\n" +
-                "var lastY = 0;\n" +
-                "var rotY = 0;\n" +
-                "var rotX = 0;\n" +
-                "var pivot = document.getElementById('pivot');\n" +
-                "\n" +
-                "document.addEventListener('mousedown', function(e) {\n" +
-                "  if(e.button !== 0) return;\n" +
-                "  isDragging = true;\n" +
-                "  lastX = e.clientX;\n" +
-                "  lastY = e.clientY;\n" +
-                "});\n" +
-                "\n" +
-                "document.addEventListener('mouseup', function(e) {\n" +
-                "  isDragging = false;\n" +
-                "});\n" +
-                "\n" +
-                "document.addEventListener('mousemove', function(e) {\n" +
-                "  // Robust check: if isDragging is true but buttons are not held (1), reset state\n" +
-                "  if (!isDragging && (e.buttons & 1) === 0) return;\n" +
-                "  if (isDragging && (e.buttons & 1) === 0) {\n" +
-                "    isDragging = false;\n" +
-                "    return;\n" +
-                "  }\n" +
-                "  // If we are here, we are dragging or mouse is held down\n" +
-                "  if (!isDragging && (e.buttons & 1) === 1) {\n" +
-                "      isDragging = true;\n" +
-                "      lastX = e.clientX;\n" +
-                "      lastY = e.clientY;\n" +
-                "  }\n" +
-                "  \n" +
-                "  var dx = e.clientX - lastX;\n" +
-                "  var dy = e.clientY - lastY;\n" +
-                "  \n" +
-                "  lastX = e.clientX;\n" +
-                "  lastY = e.clientY;\n" +
-                "  \n" +
-                "  rotY += dx * 0.5;\n" +
-                "  rotX -= dy * 0.5;\n" +
-                "  \n" +
-                "  if(rotX > 90) rotX = 90;\n" +
-                "  if(rotX < -90) rotX = -90;\n" +
-                "  \n" +
-                "  if(pivot) pivot.style.transform = 'rotateX(' + (-rotX) + 'deg) rotateY(' + rotY + 'deg)';\n" +
-                "});\n" +
-                "</script></body></html>";
-    }
+    private final AnimationManager animationManager;
+    private final WebView previewPanel;
 
     public WorkspacePanelPlayerAnimations(WorkspacePanel workspacePanel) {
         super(workspacePanel, new ResourceFilterModel<>(workspacePanel,
@@ -354,22 +144,17 @@ public class WorkspacePanelPlayerAnimations extends AbstractResourcePanel<String
         JSplitPane rightSplitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
         rightSplitPane.setResizeWeight(0.7);
 
-        previewPanel = new WebView("about:blank");
+        previewPanel = new WebView("http://mcreator/playeranimator/animation_preview.html");
 
-        previewPanel.addLoadListener(() -> {
-            String skinBase64 = getSteveSkinBase64();
-            String html = getPreviewTemplate(skinBase64);
-            String base64Html = Base64.getEncoder().encodeToString(html.getBytes(StandardCharsets.UTF_8));
-            String injectionScript = "document.open(); document.write(atob('" + base64Html + "')); document.close();";
-            previewPanel.executeScript(injectionScript, WebView.JSExecutionType.LOCAL_SAFE);
-        });
+        previewPanel.addLoadListener(() -> previewPanel.executeScript(
+                "setSkin('" + getSteveSkinBase64() + "');", WebView.JSExecutionType.LOCAL_SAFE));
         
         JPanel previewContainer = new JPanel(new BorderLayout());
         previewContainer.add(previewPanel, BorderLayout.CENTER);
         previewContainer.setMinimumSize(new Dimension(0, 0));
         rightSplitPane.setTopComponent(previewContainer);
 
-        controlPanel = new AnimationControlPanel();
+        AnimationControlPanel controlPanel = new AnimationControlPanel();
         controlPanel.setMinimumSize(new Dimension(0, 0));
         rightSplitPane.setBottomComponent(controlPanel);
 
@@ -389,7 +174,6 @@ public class WorkspacePanelPlayerAnimations extends AbstractResourcePanel<String
     private String getSteveSkinBase64() {
         try {
             ImageIcon icon = UIRES.get("16px.steve");
-            if (icon == null) return "";
             Image awtImage = icon.getImage();
             BufferedImage bimg = new BufferedImage(awtImage.getWidth(null), awtImage.getHeight(null), BufferedImage.TYPE_INT_ARGB);
             Graphics2D g = bimg.createGraphics();
@@ -452,7 +236,7 @@ public class WorkspacePanelPlayerAnimations extends AbstractResourcePanel<String
     public void deleteCurrentlySelected() {
         List<String> elements = elementList.getSelectedValuesList();
         if (!elements.isEmpty()) {
-            int confirm = JOptionPane.showConfirmDialog(this.workspacePanel.getMCreator(), L10N.t("workspace.player_animations.delete_confirm_message", new Object[0]), L10N.t("common.confirmation", new Object[0]), 0, 3, (Icon)null);
+            int confirm = JOptionPane.showConfirmDialog(this.workspacePanel.getMCreator(), L10N.t("workspace.player_animations.delete_confirm_message", new Object[0]), L10N.t("common.confirmation", new Object[0]), JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, (Icon)null);
             if (confirm == 0) {
                 elements.forEach(animation -> {
                     File animFile = new File(getAnimationsDir(workspacePanel.getMCreator()), animation + ".json");
@@ -502,13 +286,13 @@ public class WorkspacePanelPlayerAnimations extends AbstractResourcePanel<String
     }
 
     static class AnimationControlPanel extends JPanel {
-        private JComboBox<String> animationSelector;
-        private JButton playButton, pauseButton, stopButton;
-        private JSlider timelineSlider;
-        private JLabel timeLabel;
-        private JComboBox<String> loopTypeSelector;
-        private JSpinner speedSpinner;
-        private TimelinePanel timelinePanel;
+        private final JComboBox<String> animationSelector;
+        private final JButton playButton, pauseButton, stopButton;
+        private final JSlider timelineSlider;
+        private final JLabel timeLabel;
+        private final JComboBox<String> loopTypeSelector;
+        private final JSpinner speedSpinner;
+        private final TimelinePanel timelinePanel;
 
         public AnimationControlPanel() {
             setLayout(new BorderLayout(5, 5));
@@ -636,13 +420,12 @@ public class WorkspacePanelPlayerAnimations extends AbstractResourcePanel<String
     }
 
     static class AnimationManager {
-        private WebView webView;
-        private java.util.Timer animationTimer;
-        private Map<String, AnimationData> animations;
-        private List<String> animationNames;
+        private final WebView webView;
+        private final Map<String, AnimationData> animations;
+        private final List<String> animationNames;
         private volatile String currentAnimationName;
         private volatile double animationTime = 0;
-        private AnimationControlPanel controlPanel;
+        private final AnimationControlPanel controlPanel;
         private volatile boolean isPlaying = false;
         private volatile double playbackSpeed = 1.0;
 
@@ -663,12 +446,12 @@ public class WorkspacePanelPlayerAnimations extends AbstractResourcePanel<String
 
         private void initWebView() {
             // Using java.util.Timer to run off-EDT and avoid stack overflow with blocking executeScript
-            animationTimer = new java.util.Timer("AnimationLoop", true);
+            java.util.Timer animationTimer = new java.util.Timer("AnimationLoop", true);
             animationTimer.scheduleAtFixedRate(new TimerTask() {
                 @Override
                 public void run() {
                     try {
-                        updateAnimation(0.016);
+                        updateAnimation();
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -718,8 +501,7 @@ public class WorkspacePanelPlayerAnimations extends AbstractResourcePanel<String
                         }
                         AnimationData anim = getCurrentAnimation();
                         if (anim != null) {
-                            float newTime = (controlPanel.getTimelineSlider().getValue() / 100f) * anim.length;
-                            animationTime = newTime;
+                            animationTime = (controlPanel.getTimelineSlider().getValue() / 100f) * anim.length;
                             applyAnimation(anim, (float) animationTime);
                             controlPanel.getTimelinePanel().setCurrentTime((float) animationTime);
                             updateTimeLabel();
@@ -785,12 +567,12 @@ public class WorkspacePanelPlayerAnimations extends AbstractResourcePanel<String
             }
         }
 
-        private void updateAnimation(double deltaTime) {
+        private void updateAnimation() {
             AnimationData anim = getCurrentAnimation();
             if (anim == null) return;
 
             if (isPlaying) {
-                animationTime += deltaTime * playbackSpeed;
+                animationTime += 0.016 * playbackSpeed;
 
                 String loopType = (String) controlPanel.getLoopTypeSelector().getSelectedItem();
 
@@ -890,19 +672,18 @@ public class WorkspacePanelPlayerAnimations extends AbstractResourcePanel<String
             }
 
             if (lastKf == null) return null;
-            Vec3 postVec = lastKf.post.isMolang() ? evalMolang(lastKf.post.molang, time) : lastKf.post.vector;
-            if (nextKf == null) return postVec;
+            Vec3 p1 = lastKf.post.isMolang() ? evalMolang(lastKf.post.molang, time) : lastKf.post.vector;
+            if (nextKf == null) return p1;
 
             float t1 = lastKf.time;
             float t2_ = nextKf.time;
-            if (t1 == t2_) return postVec;
+            if (t1 == t2_) return p1;
 
             float alpha = (time - t1) / (t2_ - t1);
-            Vec3 v1 = postVec;
-            Vec3 v2 = nextKf.pre.isMolang() ? evalMolang(nextKf.pre.molang, time) : nextKf.pre.vector;
+            Vec3 p2 = nextKf.pre.isMolang() ? evalMolang(nextKf.pre.molang, time) : nextKf.pre.vector;
 
             if (lastKf.catmullrom) {
-                Vec3 p0 = v1, p1 = v1, p2 = v2, p3 = v2;
+                Vec3 p0 = p1, p3 = p2;
                 if (lastIdx > 0) {
                     PreviewKeyframeValue kv = keyframes.get(lastIdx - 1).post;
                     p0 = kv.isMolang() ? evalMolang(kv.molang, time) : kv.vector;
@@ -920,7 +701,7 @@ public class WorkspacePanelPlayerAnimations extends AbstractResourcePanel<String
                 );
             }
 
-            return new Vec3(v1.x + (v2.x - v1.x) * alpha, v1.y + (v2.y - v1.y) * alpha, v1.z + (v2.z - v1.z) * alpha);
+            return new Vec3(p1.x + (p2.x - p1.x) * alpha, p1.y + (p2.y - p1.y) * alpha, p1.z + (p2.z - p1.z) * alpha);
         }
 
         private static Vec3 evalMolang(String expr, float time) {
