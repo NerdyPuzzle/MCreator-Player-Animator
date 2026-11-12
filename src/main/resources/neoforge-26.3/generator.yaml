@@ -1,0 +1,23 @@
+base_templates:
+  - template: animation_play_packet.java.ftl
+    name: "@SRCROOT/@BASEPACKAGEPATH/network/PlayPlayerAnimationMessage.java"
+  - template: player_animation_api.java.ftl
+    name: "@SRCROOT/@BASEPACKAGEPATH/@JavaModNamePlayerAnimationAPI.java"
+  - template: player_model_mixin.java.ftl
+    name: "@SRCROOT/@BASEPACKAGEPATH/mixin/PlayerAnimationMixin.java"
+  - template: player_renderer_mixin.java.ftl
+    name: "@SRCROOT/@BASEPACKAGEPATH/mixin/PlayerAnimationRendererMixin.java"
+  - template: item_in_hand_layer_mixin.java.ftl
+    name: "@SRCROOT/@BASEPACKAGEPATH/mixin/ItemInHandLayerMixin.java"
+  - template: entity_renderer_mixin.java.ftl
+    name: "@SRCROOT/@BASEPACKAGEPATH/mixin/EntityRendererMixin.java"
+  - template: firstperson/camera_accessor.java.ftl
+    name: "@SRCROOT/@BASEPACKAGEPATH/mixin/CameraAccessor.java"
+  - template: firstperson/entity_render_dispatcher_mixin.java.ftl
+    name: "@SRCROOT/@BASEPACKAGEPATH/mixin/EntityRenderDispatcherMixin.java"
+  - template: firstperson/living_entity_renderer_mixin.java.ftl
+    name: "@SRCROOT/@BASEPACKAGEPATH/mixin/LivingEntityRendererMixin.java"
+  - template: firstperson/first_person_hand_renderer_mixin.java.ftl
+    name: "@SRCROOT/@BASEPACKAGEPATH/mixin/FirstPersonHandsAndItemsRendererMixin.java"
+  - template: firstperson/level_extractor_mixin.java.ftl
+    name: "@SRCROOT/@BASEPACKAGEPATH/mixin/LevelExtractorMixin.java"

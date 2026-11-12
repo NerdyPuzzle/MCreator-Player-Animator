@@ -1,0 +1,63 @@
+package ${package}.mixin;
+
+@Mixin(AvatarRenderer.class)
+public abstract class PlayerAnimationRendererMixin extends LivingEntityRenderer<AbstractClientPlayer, AvatarRenderState, PlayerModel> {
+    private String master = null;
+    private Minecraft mc = Minecraft.getInstance();
+
+    public PlayerAnimationRendererMixin(EntityRendererProvider.Context context, boolean slim) {
+        super(null, null, 0.5f);
+    }
+
+    @Inject(method = "Lnet/minecraft/client/renderer/entity/player/AvatarRenderer;setupRotations(Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;FF)V", at = @At("RETURN"))
+    private void setupRotations(AvatarRenderState renderState, PoseStack poseStack, float bodyRot, float scale_, CallbackInfo ci) {
+		Player player = (Player) renderState.getRenderData(${JavaModName}PlayerAnimationAPI.ClientAttachments.PLAYER);
+		if (player == null)
+		    return;
+		if (master == null) {
+		    if (!${JavaModName}PlayerAnimationAPI.animations.isEmpty())
+			    master = "${modid}";
+			else
+			    return;
+		}
+		if (!master.equals("${modid}"))
+			return;
+	    ${JavaModName}PlayerAnimationAPI.PlayerAnimation animation = ${JavaModName}PlayerAnimationAPI.active_animations.get(player);
+	    if (animation == null)
+	        return;
+	    ${JavaModName}PlayerAnimationAPI.PlayerBone bone = animation.bones.get("body");
+	    boolean firstPerson = player.getPersistentData().getBooleanOr("FirstPersonAnimation", false) && mc.options.getCameraType().isFirstPerson() && player == mc.player && (mc.gui.screen() == null || mc.gui.screen() instanceof ChatScreen);
+        if (bone == null && !firstPerson)
+            return;
+        if (bone != null) {
+            float animationProgress = player.getPersistentData().getFloatOr("PlayerAnimationProgress", 0);
+		    Vec3 scale = ${JavaModName}PlayerAnimationAPI.PlayerBone.interpolate(bone.scales, animationProgress, player);
+		    if (scale != null) {
+			    poseStack.scale((float) scale.x, (float) scale.y, (float) scale.z);
+		    }
+		    Vec3 position = ${JavaModName}PlayerAnimationAPI.PlayerBone.interpolate(bone.positions, animationProgress, player);
+		    if (position != null) {
+		        if (!firstPerson)
+			        poseStack.translate((float) -position.x * 0.0625f, (float) (position.y * 0.0625f) + 0.75f, (float) position.z * 0.0625f);
+		    }
+		    Vec3 rotation = ${JavaModName}PlayerAnimationAPI.PlayerBone.interpolate(bone.rotations, animationProgress, player);
+		    if (rotation != null) {
+		        if (!firstPerson)
+			        poseStack.rotateDegrees(Axis.ZP, (float) rotation.z);
+			    poseStack.rotateDegrees(Axis.YP, (float) -rotation.y);
+			    if (!firstPerson)
+			        poseStack.rotateDegrees(Axis.XP, (float) -rotation.x);
+		    }
+		    if (position != null) {
+		        if (!firstPerson)
+		            poseStack.translate(0, -0.75f, 0);
+		    }
+		}
+	    if (firstPerson && scale_ != 69) {
+	        poseStack.rotateDegrees(Axis.YP, bodyRot - player.getYRot());
+	        poseStack.translate(0, 1.5f, 0);
+	        poseStack.rotateDegrees(Axis.XP, -player.getXRot());
+	        poseStack.translate(0, -1.5f, 0);
+	    }
+	}
+}

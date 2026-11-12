@@ -2,6 +2,7 @@ import groovy.json.JsonSlurper
 
 plugins {
     id "java"
+    id "idea"
 }
 
 repositories {
@@ -14,6 +15,13 @@ group = 'net.nerdypuzzle.playeranimator'
 version = new JsonSlurper().parse(file('src/main/resources/plugin.json'))['info']['version']
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(25)
+
+project(':MCreator') { mcreatorProject ->
+    mcreatorProject.plugins.withId('idea') {
+        // MCreator configures idea.project, which Gradle only creates for the root project.
+        mcreatorProject.idea.project = rootProject.idea.project
+    }
+}
 
 dependencies {
     implementation project(':MCreator')

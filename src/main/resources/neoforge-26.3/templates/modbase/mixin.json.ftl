@@ -1,0 +1,23 @@
+{
+  "required": true,
+  "package": "${package}.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "mixins": [
+	<#list fragments.mixin as mixin>"${mixin}"<#sep>,</#list>
+  ],
+  "client": [
+    "PlayerAnimationMixin",
+    "PlayerAnimationRendererMixin",
+    "ItemInHandLayerMixin",
+    "CameraAccessor",
+    "EntityRenderDispatcherMixin",
+    "LivingEntityRendererMixin",
+    "EntityRendererMixin",
+    "FirstPersonHandsAndItemsRendererMixin",
+    "LevelExtractorMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "minVersion": "0.8.4"
+}
